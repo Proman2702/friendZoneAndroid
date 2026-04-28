@@ -1,5 +1,6 @@
 package com.friendzone.android.data.repository
 
+import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.remote.FriendZoneApi
 import com.friendzone.android.data.remote.dto.EventDto
 import kotlinx.coroutines.flow.first

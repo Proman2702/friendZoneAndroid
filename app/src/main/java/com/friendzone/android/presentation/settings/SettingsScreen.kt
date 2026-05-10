@@ -8,13 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -59,20 +58,26 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            IconButton(
-                onClick = {
-                    viewModel.save()
-                    onBack()
-                }
+            Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
-                    tint = Color.White
-                )
+                IconButton(
+                    onClick = {
+                        viewModel.save()
+                        onBack()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        tint = SettingsText
+                    )
+                }
             }
 
             SettingsFieldCard(
@@ -100,19 +105,10 @@ fun SettingsScreen(
                 checked = state.notifyAboutFriend,
                 onCheckedChange = viewModel::updateNotifyAboutFriend
             )
+
             SettingsActionCard("Сигнал при пересечении зоны...")
             SettingsActionCard("Сигнал при пересечении с другом...")
             SettingsActionCard("О приложении...")
-
-            Button(
-                onClick = {
-                    viewModel.save()
-                    onBack()
-                },
-                modifier = Modifier.padding(top = 20.dp)
-            ) {
-                Text("Сохранить")
-            }
         }
     }
 }
@@ -133,7 +129,7 @@ private fun SettingsFieldCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -145,7 +141,7 @@ private fun SettingsFieldCard(
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(0.42f),
+                modifier = Modifier.fillMaxWidth(0.38f),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     color = SettingsAccent,

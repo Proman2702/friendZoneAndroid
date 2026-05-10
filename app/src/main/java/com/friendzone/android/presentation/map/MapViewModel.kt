@@ -22,8 +22,6 @@ data class MapFocusTarget(
 data class MapScreenState(
     val isLoading: Boolean = false,
     val zones: List<ZoneUi> = emptyList(),
-    val centerLatitude: Double = 55.751244,
-    val centerLongitude: Double = 37.618423,
     val showInactiveZones: Boolean = true,
     val createDialogVisible: Boolean = false,
     val selectedZoneId: String? = null,
@@ -38,6 +36,9 @@ class MapViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(MapScreenState())
     val state: StateFlow<MapScreenState> = _state
+
+    private var currentCenterLatitude: Double = 55.751244
+    private var currentCenterLongitude: Double = 37.618423
 
     fun loadZones() {
         viewModelScope.launch {
@@ -59,10 +60,8 @@ class MapViewModel @Inject constructor(
     }
 
     fun updateMapCenter(latitude: Double, longitude: Double) {
-        _state.value = _state.value.copy(
-            centerLatitude = latitude,
-            centerLongitude = longitude
-        )
+        currentCenterLatitude = latitude
+        currentCenterLongitude = longitude
     }
 
     fun requestCreateDialog() {
@@ -86,15 +85,14 @@ class MapViewModel @Inject constructor(
     }
 
     fun createZone(name: String, radiusMeters: Double) {
-        val currentState = _state.value
         viewModelScope.launch {
             // Ставим нижнюю границу, чтобы зона не исчезала визуально на карте.
             val normalizedRadius = radiusMeters.coerceAtLeast(50.0)
             runCatching {
                 zoneRepository.createZone(
                     name = name.ifBlank { "Новая зона" },
-                    centerLat = currentState.centerLatitude,
-                    centerLon = currentState.centerLongitude,
+                    centerLat = currentCenterLatitude,
+                    centerLon = currentCenterLongitude,
                     radiusMeters = normalizedRadius,
                     isActive = true
                 )
@@ -168,14 +166,14 @@ class MapViewModel @Inject constructor(
                     if (result == null) {
                         _state.value = _state.value.copy(message = "Место не найдено")
                     } else {
+                        currentCenterLatitude = result.latitude
+                        currentCenterLongitude = result.longitude
                         _state.value = _state.value.copy(
                             message = result.address,
                             focusTarget = MapFocusTarget(
                                 latitude = result.latitude,
                                 longitude = result.longitude
-                            ),
-                            centerLatitude = result.latitude,
-                            centerLongitude = result.longitude
+                            )
                         )
                     }
                 }
@@ -185,10 +183,6 @@ class MapViewModel @Inject constructor(
                     )
                 }
         }
-    }
-
-    fun consumeFocusTarget() {
-        _state.value = _state.value.copy(focusTarget = null)
     }
 
     fun clearMessage() {

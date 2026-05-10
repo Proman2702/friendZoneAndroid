@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -20,29 +20,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SupervisorAccount
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -97,6 +87,11 @@ fun AppNavHost(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomDestinations.map { it.route }
+    val navHostPadding = when {
+        currentRoute == Routes.MAP -> PaddingValues(0.dp)
+        showBottomBar -> PaddingValues(bottom = 78.dp)
+        else -> PaddingValues(0.dp)
+    }
 
     LaunchedEffect(authState.isLoggedIn) {
         if (authState.isLoggedIn) {
@@ -108,6 +103,7 @@ fun AppNavHost(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
                 MainBottomBar(
@@ -121,11 +117,11 @@ fun AppNavHost(
                 )
             }
         }
-    ) { padding ->
+    ) {
         NavHost(
             navController = navController,
             startDestination = Routes.LOGIN,
-            modifier = Modifier.padding(if (showBottomBar) padding else PaddingValues(0.dp))
+            modifier = Modifier.padding(navHostPadding)
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(
@@ -201,67 +197,40 @@ private fun MainBottomBar(
     onNavigate: (String) -> Unit,
     onCreateZone: () -> Unit
 ) {
-    // Кастомная форма нужна, чтобы повторить вырез под центральную кнопку из референса.
-    val notchShape = rememberNotchedShape()
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        contentAlignment = Alignment.BottomCenter
+            .background(Color(0xFF151034))
+            .navigationBarsPadding()
+            .height(78.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Surface(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(74.dp),
-            color = Color(0xFF151034),
-            shape = notchShape,
-            shadowElevation = 10.dp
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                BottomItem(
-                    destination = bottomDestinations[0],
-                    selected = currentRoute == bottomDestinations[0].route,
-                    onClick = { onNavigate(bottomDestinations[0].route) }
-                )
-                BottomItem(
-                    destination = bottomDestinations[1],
-                    selected = currentRoute == bottomDestinations[1].route,
-                    onClick = { onNavigate(bottomDestinations[1].route) }
-                )
-                Spacer(modifier = Modifier.width(84.dp))
-                BottomItem(
-                    destination = bottomDestinations[2],
-                    selected = currentRoute == bottomDestinations[2].route,
-                    onClick = { onNavigate(bottomDestinations[2].route) }
-                )
-                BottomItem(
-                    destination = bottomDestinations[3],
-                    selected = currentRoute == bottomDestinations[3].route,
-                    onClick = { onNavigate(bottomDestinations[3].route) }
-                )
-            }
-        }
-
-        FloatingActionButton(
-            onClick = onCreateZone,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 2.dp)
-                .size(68.dp),
-            containerColor = Color(0xFFE3874F),
-            contentColor = Color.White,
-            shape = CircleShape
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Создать зону",
-                modifier = Modifier.size(34.dp)
+            BottomItem(
+                destination = bottomDestinations[0],
+                selected = currentRoute == bottomDestinations[0].route,
+                onClick = { onNavigate(bottomDestinations[0].route) }
+            )
+            BottomItem(
+                destination = bottomDestinations[1],
+                selected = currentRoute == bottomDestinations[1].route,
+                onClick = { onNavigate(bottomDestinations[1].route) }
+            )
+            CenterAddButton(onClick = onCreateZone)
+            BottomItem(
+                destination = bottomDestinations[2],
+                selected = currentRoute == bottomDestinations[2].route,
+                onClick = { onNavigate(bottomDestinations[2].route) }
+            )
+            BottomItem(
+                destination = bottomDestinations[3],
+                selected = currentRoute == bottomDestinations[3].route,
+                onClick = { onNavigate(bottomDestinations[3].route) }
             )
         }
     }
@@ -278,116 +247,47 @@ private fun RowScope.BottomItem(
         modifier = Modifier
             .weight(1f)
             .clickable(onClick = onClick)
-            .padding(top = 18.dp),
+            .padding(vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = destination.icon,
             contentDescription = destination.label,
             tint = tint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(28.dp)
         )
         Text(
             text = destination.label,
             color = tint,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
 
 @Composable
-private fun rememberNotchedShape(): Shape {
-    val density = LocalDensity.current
-    return remember(density) {
-        object : Shape {
-            override fun createOutline(
-                size: androidx.compose.ui.geometry.Size,
-                layoutDirection: LayoutDirection,
-                density: Density
-            ): Outline {
-                return with(density) {
-                    // Строим вырез вручную, потому что стандартная NavigationBar такой notch не поддерживает.
-                    val notchRadius = 38.dp.toPx()
-                    val notchDepth = 28.dp.toPx()
-                    val cornerRadius = 26.dp.toPx()
-                    val centerX = size.width / 2f
-                    val notchStart = centerX - notchRadius - 18.dp.toPx()
-                    val notchEnd = centerX + notchRadius + 18.dp.toPx()
-
-                    val path = Path().apply {
-                        moveTo(cornerRadius, 0f)
-                        lineTo(notchStart, 0f)
-                        cubicTo(
-                            notchStart + 8.dp.toPx(),
-                            0f,
-                            centerX - notchRadius,
-                            notchDepth,
-                            centerX,
-                            notchDepth
-                        )
-                        cubicTo(
-                            centerX + notchRadius,
-                            notchDepth,
-                            notchEnd - 8.dp.toPx(),
-                            0f,
-                            notchEnd,
-                            0f
-                        )
-                        lineTo(size.width - cornerRadius, 0f)
-                        arcTo(
-                            rect = Rect(
-                                left = size.width - cornerRadius * 2,
-                                top = 0f,
-                                right = size.width,
-                                bottom = cornerRadius * 2
-                            ),
-                            startAngleDegrees = -90f,
-                            sweepAngleDegrees = 90f,
-                            forceMoveTo = false
-                        )
-                        lineTo(size.width, size.height - cornerRadius)
-                        arcTo(
-                            rect = Rect(
-                                left = size.width - cornerRadius * 2,
-                                top = size.height - cornerRadius * 2,
-                                right = size.width,
-                                bottom = size.height
-                            ),
-                            startAngleDegrees = 0f,
-                            sweepAngleDegrees = 90f,
-                            forceMoveTo = false
-                        )
-                        lineTo(cornerRadius, size.height)
-                        arcTo(
-                            rect = Rect(
-                                left = 0f,
-                                top = size.height - cornerRadius * 2,
-                                right = cornerRadius * 2,
-                                bottom = size.height
-                            ),
-                            startAngleDegrees = 90f,
-                            sweepAngleDegrees = 90f,
-                            forceMoveTo = false
-                        )
-                        lineTo(0f, cornerRadius)
-                        arcTo(
-                            rect = Rect(
-                                left = 0f,
-                                top = 0f,
-                                right = cornerRadius * 2,
-                                bottom = cornerRadius * 2
-                            ),
-                            startAngleDegrees = 180f,
-                            sweepAngleDegrees = 90f,
-                            forceMoveTo = false
-                        )
-                        close()
-                    }
-                    Outline.Generic(path)
-                }
-            }
+private fun RowScope.CenterAddButton(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .background(Color(0xFFE3874F), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Создать зону",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

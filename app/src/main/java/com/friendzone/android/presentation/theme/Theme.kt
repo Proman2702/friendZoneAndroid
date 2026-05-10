@@ -11,6 +11,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+private val AppFontFamily = FontFamily.SansSerif
+
 private val LightColors = lightColorScheme(
     primary = Color(0xFF0E4D92),
     secondary = Color(0xFFFF7A59),
@@ -26,32 +28,37 @@ private val LightColors = lightColorScheme(
 
 private val AppTypography = Typography(
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         letterSpacing = 0.2.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 22.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = AppFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 11.sp
     )
 )
 

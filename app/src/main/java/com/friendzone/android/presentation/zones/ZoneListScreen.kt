@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,6 +87,7 @@ fun ZoneListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             FilterField(
@@ -188,7 +191,9 @@ private fun FilterField(
             )
         )
         Card(
-            modifier = Modifier.padding(start = 10.dp, top = (-6).dp),
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .offset(y = (-6).dp),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {

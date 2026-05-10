@@ -1,23 +1,33 @@
-# FriendZone Android MVP
+# Project Context: "FriendZone" Android App
+You are an Android Developer. Your task is to write Kotlin code for an Android application.
+The project is being developed by a first-year student, so the code MUST be highly readable, straightforward, and avoid overly complex architectural patterns (no MVI or deep abstractions).
 
-This folder contains a minimal Android MVP client (Kotlin + Compose + Hilt + Retrofit + OSM).
+## Architecture & Tech Stack
+- UI: Jetpack Compose.
+- Architecture: Layer-based (MVVM). Clear separation between UI layer, Data layer (Repositories), and optionally a simple Domain layer.
+- Networking: Retrofit 2 + OkHttp (include an interceptor for Bearer JWT tokens).
+- JSON Serialization: kotlinx.serialization.
+- Dependency Injection: Hilt (Do NOT use raw Dagger 2).
+- Local Database: Room (for caching map zones and friends list).
+- Maps: Google Maps Compose.
+- Asynchrony: Kotlin Coroutines & Flow.
 
-## Modules
-- `app`: single module app with Compose UI, Retrofit API client, DataStore storage, and basic background location upload.
+## Coding Guidelines
+1. Write code in small, understandable, and modular blocks.
+2. Use descriptive and clear variable names (e.g., `friendProximityRadius` instead of `radius2`).
+3. Comments should be concise, written in Russian, and without emojis/special characters. Only explain logic that is not immediately obvious.
+4. UI components (Composable functions) must be broken down into small, reusable parts.
+5. Avoid hardcoding strings and dimensions. Extract them to resources (`strings.xml`) or configuration files.
 
-## Key features implemented
-- `installId` + `clientId` stored in DataStore and registered via `POST /clients/register`.
-- Zone CRUD: create, list, update, delete.
-- Location upload (foreground stream) and event handling.
-- Events history screen.
-- Notifications for `ENTER/EXIT`.
+## Key Features to Anticipate
+- Background Geolocation: Requires a Foreground Service to track user position when the app is minimized (`ACCESS_BACKGROUND_LOCATION`).
+- Distance Calculation: Use `Location.distanceTo()` to trigger events when entering a zone or approaching a friend.
+- Notifications & Alarms: Trigger an AlarmManager/Notification with a custom sound that overrides silent mode (if permissions are granted) when entering a zone.
+- Map Interaction: Implement map search and quick editing of zones via a Bottom Sheet dialog on marker click.
 
-## Notes
-- Base URL defaults from `app/src/main/assets/config.yaml` and can be changed from the Zones screen.
-- Location provider is abstracted behind `LocationProvider`.
-- Map picker uses osmdroid `MapView` via `AndroidView` and defaults to Moscow center.
-- Runtime permissions are requested on first launch.
-
-## Local development
-- Emulator uses `10.0.2.2` to access host machine.
-- Physical device should use host machine IP in the same local network.
+## Output Execution Plan
+Do NOT generate the entire project at once. When asked to implement a feature, follow this strict order:
+1. Write the Data layer (Models, API interfaces, Entities).
+2. Write the ViewModel.
+3. Write the UI (Compose).
+   Wait for user confirmation before moving to the next step.

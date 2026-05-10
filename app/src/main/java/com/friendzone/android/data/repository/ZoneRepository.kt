@@ -2,18 +2,20 @@ package com.friendzone.android.data.repository
 
 import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.remote.FriendZoneApi
-import com.friendzone.android.data.remote.dto.ZoneCreateRequest
 import com.friendzone.android.data.remote.dto.ZoneDto
-import com.friendzone.android.data.remote.dto.ZoneUpdateRequest
-import kotlinx.coroutines.flow.first
+import java.util.UUID
 
 class ZoneRepository(
     private val api: FriendZoneApi,
     private val prefs: AppPreferences
 ) {
     suspend fun listZones(): List<ZoneDto> {
-        val clientId = requireClientId()
-        return api.getZones(clientId)
+        // Временно работаем только с локальным списком зон.
+        return prefs.getLocalZones()
+
+        // Возврат к серверу:
+        // val clientId = requireClientId()
+        // return api.getZones(clientId)
     }
 
     suspend fun createZone(
@@ -23,17 +25,21 @@ class ZoneRepository(
         radiusMeters: Double,
         isActive: Boolean
     ): ZoneDto {
-        val clientId = requireClientId()
-        return api.createZone(
-            ZoneCreateRequest(
-                clientId = clientId,
-                name = name,
-                centerLat = centerLat,
-                centerLon = centerLon,
-                radiusMeters = radiusMeters,
-                isActive = isActive
-            )
+        val zones = prefs.getLocalZones()
+        val zone = ZoneDto(
+            id = UUID.randomUUID().toString(),
+            name = name.trim(),
+            centerLat = centerLat,
+            centerLon = centerLon,
+            radiusMeters = radiusMeters,
+            isActive = isActive
         )
+        prefs.saveLocalZones(zones + zone)
+        return zone
+
+        // Возврат к серверу:
+        // val clientId = requireClientId()
+        // return api.createZone(...)
     }
 
     suspend fun updateZone(
@@ -44,27 +50,35 @@ class ZoneRepository(
         radiusMeters: Double,
         isActive: Boolean
     ): ZoneDto {
-        val clientId = requireClientId()
-        return api.updateZone(
-            zoneId,
-            ZoneUpdateRequest(
-                clientId = clientId,
-                name = name,
-                centerLat = centerLat,
-                centerLon = centerLon,
-                radiusMeters = radiusMeters,
-                isActive = isActive
-            )
+        val updatedZone = ZoneDto(
+            id = zoneId,
+            name = name.trim(),
+            centerLat = centerLat,
+            centerLon = centerLon,
+            radiusMeters = radiusMeters,
+            isActive = isActive
         )
+        val updatedZones = prefs.getLocalZones().map { existing ->
+            if (existing.id == zoneId) updatedZone else existing
+        }
+        prefs.saveLocalZones(updatedZones)
+        return updatedZone
+
+        // Возврат к серверу:
+        // val clientId = requireClientId()
+        // return api.updateZone(...)
     }
 
     suspend fun deleteZone(zoneId: String) {
-        val clientId = requireClientId()
-        api.deleteZone(zoneId, clientId)
+        val updatedZones = prefs.getLocalZones().filterNot { it.id == zoneId }
+        prefs.saveLocalZones(updatedZones)
+
+        // Возврат к серверу:
+        // val clientId = requireClientId()
+        // api.deleteZone(zoneId, clientId)
     }
 
-    private suspend fun requireClientId(): String =
-        prefs.clientId.first() ?: error("clientId is missing. Registration not completed.")
+    suspend fun getZone(zoneId: String): ZoneDto? {
+        return prefs.getLocalZones().firstOrNull { it.id == zoneId }
+    }
 }
-
-

@@ -2,18 +2,20 @@ package com.friendzone.android.presentation.zones
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.friendzone.android.data.repository.ZoneRepository
 import com.friendzone.android.data.local.AppPreferences
-import kotlinx.coroutines.flow.first
+import com.friendzone.android.data.repository.ZoneRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class ZoneUi(
     val id: String,
     val name: String,
+    val centerLat: Double,
+    val centerLon: Double,
     val radiusMeters: Double,
     val isActive: Boolean
 )
@@ -22,7 +24,8 @@ data class ZoneListState(
     val isLoading: Boolean = false,
     val zones: List<ZoneUi> = emptyList(),
     val error: String? = null,
-    val apiBaseUrl: String = ""
+    val apiBaseUrl: String = "",
+    val message: String? = null
 )
 
 @HiltViewModel
@@ -59,28 +62,69 @@ class ZoneListViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             runCatching { repository.listZones() }
                 .onSuccess { zones ->
-                    _state.value = ZoneListState(
+                    _state.value = _state.value.copy(
                         isLoading = false,
-                        zones = zones.map {
-                            ZoneUi(
-                                id = it.id,
-                                name = it.name,
-                                radiusMeters = it.radiusMeters,
-                                isActive = it.isActive
-                            )
-                        },
-                        apiBaseUrl = _state.value.apiBaseUrl
+                        zones = zones.map { it.toUi() }
                     )
                 }
                 .onFailure { error ->
-                    _state.value = ZoneListState(
+                    _state.value = _state.value.copy(
                         isLoading = false,
-                        error = error.message ?: "Failed to load zones",
-                        apiBaseUrl = _state.value.apiBaseUrl
+                        error = error.message ?: "Не удалось загрузить зоны"
                     )
                 }
         }
     }
+
+    fun updateZone(zone: ZoneUi) {
+        viewModelScope.launch {
+            runCatching {
+                repository.updateZone(
+                    zoneId = zone.id,
+                    name = zone.name,
+                    centerLat = zone.centerLat,
+                    centerLon = zone.centerLon,
+                    radiusMeters = zone.radiusMeters.coerceAtLeast(50.0),
+                    isActive = zone.isActive
+                )
+            }.onSuccess {
+                _state.value = _state.value.copy(message = "Зона обновлена")
+                loadZones()
+            }.onFailure { error ->
+                _state.value = _state.value.copy(
+                    message = error.message ?: "Не удалось обновить зону"
+                )
+            }
+        }
+    }
+
+    fun deleteZone(zoneId: String) {
+        viewModelScope.launch {
+            runCatching { repository.deleteZone(zoneId) }
+                .onSuccess {
+                    _state.value = _state.value.copy(message = "Зона удалена")
+                    loadZones()
+                }
+                .onFailure { error ->
+                    _state.value = _state.value.copy(
+                        message = error.message ?: "Не удалось удалить зону"
+                    )
+                }
+        }
+    }
+
+    fun clearMessage() {
+        _state.value = _state.value.copy(message = null)
+    }
+
+    private fun com.friendzone.android.data.remote.dto.ZoneDto.toUi(): ZoneUi {
+        return ZoneUi(
+            id = id,
+            name = name,
+            centerLat = centerLat,
+            centerLon = centerLon,
+            radiusMeters = radiusMeters,
+            isActive = isActive
+        )
+    }
 }
-
-

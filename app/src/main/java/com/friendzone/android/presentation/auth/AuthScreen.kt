@@ -1,18 +1,24 @@
 package com.friendzone.android.presentation.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,9 +28,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,14 +40,21 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.friendzone.android.R
 
 private val AuthBackground = Brush.verticalGradient(
     colors = listOf(
@@ -54,6 +64,9 @@ private val AuthBackground = Brush.verticalGradient(
 )
 private val AuthAccent = Color(0xFFE3874F)
 private val AuthFieldText = Color(0xFF1D163D)
+private val AuthFieldLabel = Color(0xFF3EABE3)
+private val LogoWhite = Color.White
+private val Righteous = FontFamily(Font(R.font.righteous))
 
 @Composable
 fun LoginScreen(
@@ -68,15 +81,18 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     AuthScaffold {
+        Spacer(modifier = Modifier.height(120.dp))
         LogoBlock()
-        Spacer(modifier = Modifier.height(72.dp))
+        Spacer(modifier = Modifier.height(96.dp))
         AuthTextField(
             value = email,
             onValueChange = { email = it },
             label = "Логин",
-            keyboardType = KeyboardType.Email
+            keyboardType = KeyboardType.Email,
+            width = 320.dp,
+            height = 64.dp
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         AuthTextField(
             value = password,
             onValueChange = { password = it },
@@ -84,13 +100,14 @@ fun LoginScreen(
             keyboardType = KeyboardType.Password,
             isPassword = true,
             passwordVisible = passwordVisible,
-            onTogglePasswordVisibility = { passwordVisible = !passwordVisible }
+            onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
+            width = 320.dp,
+            height = 64.dp
         )
+        Spacer(modifier = Modifier.height(12.dp))
         UnderlinedActionText(
             text = "Забыли пароль?",
-            modifier = Modifier
-                .align(Alignment.End)
-                .padding(top = 8.dp),
+            modifier = Modifier.align(Alignment.End),
             onClick = onOpenForgotPassword
         )
         if (!errorMessage.isNullOrBlank()) {
@@ -110,13 +127,16 @@ fun LoginScreen(
             )
         }
         Spacer(modifier = Modifier.height(80.dp))
-        PrimaryAuthButton(text = "Вход") {
+        PrimaryAuthButton(
+            text = "Вход",
+            width = 140.dp,
+            height = 40.dp
+        ) {
             onLogin(email, password)
         }
         UnderlinedActionText(
             text = "Регистрация",
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 12.dp),
+            modifier = Modifier.padding(top = 6.dp),
             onClick = onOpenRegistration
         )
     }
@@ -134,15 +154,24 @@ fun RegisterScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     AuthScaffold {
-        AuthHeader("Регистрация")
-        Spacer(modifier = Modifier.height(40.dp))
-        AuthTextField(value = name, onValueChange = { name = it }, label = "Имя")
+        Spacer(modifier = Modifier.height(120.dp))
+        AuthTitleBlock("Регистрация")
+        Spacer(modifier = Modifier.height(96.dp))
+        AuthTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = "Имя",
+            width = 320.dp,
+            height = 64.dp
+        )
         Spacer(modifier = Modifier.height(16.dp))
         AuthTextField(
             value = email,
             onValueChange = { email = it },
             label = "Почта",
-            keyboardType = KeyboardType.Email
+            keyboardType = KeyboardType.Email,
+            width = 320.dp,
+            height = 64.dp
         )
         Spacer(modifier = Modifier.height(16.dp))
         AuthTextField(
@@ -152,7 +181,9 @@ fun RegisterScreen(
             keyboardType = KeyboardType.Password,
             isPassword = true,
             passwordVisible = passwordVisible,
-            onTogglePasswordVisibility = { passwordVisible = !passwordVisible }
+            onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
+            width = 320.dp,
+            height = 64.dp
         )
         if (!errorMessage.isNullOrBlank()) {
             Text(
@@ -162,14 +193,17 @@ fun RegisterScreen(
                 textAlign = TextAlign.Center
             )
         }
-        Spacer(modifier = Modifier.height(48.dp))
-        PrimaryAuthButton(text = "Сохранить") {
+        Spacer(modifier = Modifier.height(80.dp))
+        PrimaryAuthButton(
+            text = "Сохранить",
+            width = 140.dp,
+            height = 40.dp
+        ) {
             onRegister(name, email, password)
         }
         UnderlinedActionText(
             text = "Назад ко входу",
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 12.dp),
+            modifier = Modifier.padding(top = 6.dp),
             onClick = onBack
         )
     }
@@ -185,13 +219,16 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
 
     AuthScaffold {
-        AuthHeader("Восстановление")
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(120.dp))
+        AuthTitleBlock("Восстановление пароля")
+        Spacer(modifier = Modifier.height(96.dp))
         AuthTextField(
             value = email,
             onValueChange = { email = it },
             label = "Почта",
-            keyboardType = KeyboardType.Email
+            keyboardType = KeyboardType.Email,
+            width = 320.dp,
+            height = 64.dp
         )
         if (!errorMessage.isNullOrBlank()) {
             Text(
@@ -209,14 +246,17 @@ fun ForgotPasswordScreen(
                 textAlign = TextAlign.Center
             )
         }
-        Spacer(modifier = Modifier.height(48.dp))
-        PrimaryAuthButton(text = "Отправить") {
+        Spacer(modifier = Modifier.height(80.dp))
+        PrimaryAuthButton(
+            text = "Отправить",
+            width = 140.dp,
+            height = 40.dp
+        ) {
             onRecover(email)
         }
         UnderlinedActionText(
             text = "Назад ко входу",
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 12.dp),
+            modifier = Modifier.padding(top = 6.dp),
             onClick = onBack
         )
     }
@@ -246,36 +286,64 @@ private fun LogoBlock() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "Friend",
-            color = Color.White,
-            fontSize = 46.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = TextStyle(
+                fontFamily = Righteous,
+                fontSize = 60.sp,
+                color = LogoWhite,
+                letterSpacing = 3.sp
+            )
         )
-        Text(
-            text = "zOne",
-            color = Color.White,
-            fontSize = 42.sp,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.align(Alignment.End)
-        )
+        Row(
+            modifier = Modifier
+                .offset(y = (-16).dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "z",
+                    style = TextStyle(
+                        fontFamily = Righteous,
+                        fontSize = 60.sp,
+                        color = LogoWhite
+                    ),
+                    modifier = Modifier.padding(end = 60.dp)
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.location_pin),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(Color(0xFFDF7E4A)),
+                    modifier = Modifier
+                        .size(60.dp)
+                        .offset(x = 10.dp, y = (-4).dp)
+                )
+            }
+            Text(
+                text = "ne",
+                style = TextStyle(
+                    fontFamily = Righteous,
+                    fontSize = 60.sp,
+                    color = LogoWhite,
+                    letterSpacing = 3.sp
+                ),
+                modifier = Modifier.offset(x = (-8).dp)
+            )
+        }
     }
 }
 
 @Composable
-private fun AuthHeader(title: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "Friend zOne",
-            color = Color.White,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.ExtraBold
-        )
+private fun AuthTitleBlock(title: String) {
         Text(
             text = title,
-            color = AuthAccent,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(top = 12.dp)
+            color = Color.White,
+            fontSize = 40.sp,
+            lineHeight = 50.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp)
         )
-    }
 }
 
 @Composable
@@ -283,53 +351,104 @@ private fun AuthTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    width: Dp = 320.dp,
+    height: Dp = 64.dp,
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false,
     passwordVisible: Boolean = false,
     onTogglePasswordVisibility: (() -> Unit)? = null
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) },
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        visualTransformation = if (isPassword && !passwordVisible) {
-            PasswordVisualTransformation()
-        } else {
-            VisualTransformation.None
-        },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        trailingIcon = if (isPassword && onTogglePasswordVisibility != null) {
-            {
-                IconButton(onClick = onTogglePasswordVisibility) {
+    val fieldShape = RoundedCornerShape(16.dp)
+    val labelShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomEnd = 12.dp)
+    val visualTransformation = if (isPassword && !passwordVisible) {
+        PasswordVisualTransformation()
+    } else {
+        VisualTransformation.None
+    }
+
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(height - 10.dp)
+                .clip(fieldShape)
+                .background(Color.White)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(
+                    color = AuthFieldText,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                visualTransformation = visualTransformation,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.CenterStart)
+                    .padding(start = 20.dp, end = if (isPassword) 52.dp else 20.dp),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        innerTextField()
+                    }
+                }
+            )
+
+            if (isPassword && onTogglePasswordVisibility != null) {
+                IconButton(
+                    onClick = onTogglePasswordVisibility,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 8.dp)
+                ) {
                     Icon(
-                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Скрыть пароль" else "Показать пароль",
+                        imageVector = if (passwordVisible) {
+                            Icons.Default.Visibility
+                        } else {
+                            Icons.Default.VisibilityOff
+                        },
+                        contentDescription = if (passwordVisible) {
+                            "Пароль виден"
+                        } else {
+                            "Пароль скрыт"
+                        },
                         tint = AuthFieldText
                     )
                 }
             }
-        } else {
-            null
-        },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            focusedBorderColor = Color.Transparent,
-            unfocusedBorderColor = Color.Transparent,
-            focusedTextColor = AuthFieldText,
-            unfocusedTextColor = AuthFieldText,
-            focusedLabelColor = Color(0xFF2E77B8),
-            unfocusedLabelColor = Color(0xFF2E77B8),
-            cursorColor = AuthAccent
+        }
+
+        Text(
+            text = label,
+            color = AuthFieldLabel,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(start = 20.dp)
+                .clip(labelShape)
+                .background(Color.White)
+                .padding(horizontal = 9.dp, vertical = 4.dp)
         )
-    )
+    }
 }
 
 @Composable
-private fun PrimaryAuthButton(text: String, onClick: () -> Unit) {
+private fun PrimaryAuthButton(
+    text: String,
+    width: Dp = 140.dp,
+    height: Dp = 48.dp,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
@@ -338,11 +457,11 @@ private fun PrimaryAuthButton(text: String, onClick: () -> Unit) {
             contentColor = Color.White
         ),
         modifier = Modifier
-            .fillMaxWidth(0.38f)
-            .height(48.dp)
+            .width(width)
+            .height(height)
             .clip(RoundedCornerShape(10.dp))
     ) {
-        Text(text = text, fontWeight = FontWeight.Bold)
+        Text(text = text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
     }
 }
 
@@ -350,19 +469,20 @@ private fun PrimaryAuthButton(text: String, onClick: () -> Unit) {
 private fun UnderlinedActionText(
     text: String,
     modifier: Modifier = Modifier,
-    fontWeight: FontWeight = FontWeight.Normal,
-    underlineOffset: Dp = 2.dp,
+    fontWeight: FontWeight = FontWeight.Bold,
+    textSize: TextUnit = 14.sp,
     onClick: () -> Unit
 ) {
     Text(
         text = text,
         color = Color.White,
         fontWeight = fontWeight,
+        fontSize = textSize,
         modifier = modifier
             .clickable(onClick = onClick)
             .drawBehind {
                 val strokeWidth = 1.dp.toPx()
-                val y = size.height + underlineOffset.toPx()
+                val y = size.height
                 drawLine(
                     color = Color.White,
                     start = androidx.compose.ui.geometry.Offset(0f, y),
@@ -370,8 +490,6 @@ private fun UnderlinedActionText(
                     strokeWidth = strokeWidth
                 )
             }
-            .padding(bottom = 3.dp)
+            .padding(bottom = 1.dp)
     )
 }
-
-

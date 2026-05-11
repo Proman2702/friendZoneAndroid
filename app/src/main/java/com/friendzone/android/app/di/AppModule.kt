@@ -5,6 +5,7 @@ import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.repository.AuthRepository
 import com.friendzone.android.data.repository.ClientRepository
 import com.friendzone.android.data.repository.EventRepository
+import com.friendzone.android.data.repository.FriendsRepository
 import com.friendzone.android.data.repository.LocationRepository
 import com.friendzone.android.data.repository.ZoneRepository
 import com.friendzone.android.core.location.LocationProvider
@@ -67,6 +68,12 @@ object AppModule {
         api: FriendZoneApi,
         prefs: AppPreferences
     ): EventRepository = EventRepository(api, prefs)
+
+    @Provides
+    @Singleton
+    fun provideFriendsRepository(
+        prefs: AppPreferences
+    ): FriendsRepository = FriendsRepository(prefs)
 
     @Provides
     @Singleton

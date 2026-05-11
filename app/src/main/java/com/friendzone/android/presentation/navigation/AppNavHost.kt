@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -41,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.friendzone.android.presentation.account.AccountScreen
+import com.friendzone.android.presentation.account.InvitationsScreen
 import com.friendzone.android.presentation.auth.AuthViewModel
 import com.friendzone.android.presentation.auth.ForgotPasswordScreen
 import com.friendzone.android.presentation.auth.LoginScreen
@@ -62,6 +62,7 @@ object Routes {
     const val ACCOUNT = "account"
     const val SETTINGS = "settings"
     const val ZONE_EDIT = "zone_edit"
+    const val INVITATIONS = "invitations"
 }
 
 private data class BottomDestination(
@@ -87,11 +88,6 @@ fun AppNavHost(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomDestinations.map { it.route }
-    val navHostPadding = when {
-        currentRoute == Routes.MAP -> PaddingValues(0.dp)
-        showBottomBar -> PaddingValues(bottom = 78.dp)
-        else -> PaddingValues(0.dp)
-    }
 
     LaunchedEffect(authState.isLoggedIn) {
         if (authState.isLoggedIn) {
@@ -110,18 +106,17 @@ fun AppNavHost(
                     currentRoute = currentRoute,
                     onNavigate = { route -> navController.navigateToMainRoute(route) },
                     onCreateZone = {
-                        // Диалог зоны открываем на карте, потому что точка создания берётся из центра карты.
                         mapViewModel.requestCreateDialog()
                         navController.navigateToMainRoute(Routes.MAP)
                     }
                 )
             }
         }
-    ) {
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Routes.LOGIN,
-            modifier = Modifier.padding(navHostPadding)
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(
@@ -164,10 +159,7 @@ fun AppNavHost(
                 )
             }
             composable(Routes.MAP) {
-                MapScreen(
-                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                    viewModel = mapViewModel
-                )
+                MapScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) }, viewModel = mapViewModel)
             }
             composable(Routes.ZONES) {
                 ZoneListScreen()
@@ -176,10 +168,16 @@ fun AppNavHost(
                 FriendsScreen()
             }
             composable(Routes.ACCOUNT) {
-                AccountScreen(onLogout = authViewModel::logout)
+                AccountScreen(
+                    onOpenInvitations = { navController.navigate(Routes.INVITATIONS) },
+                    onLogout = authViewModel::logout
+                )
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.INVITATIONS) {
+                InvitationsScreen(onBack = { navController.popBackStack() })
             }
             composable("${Routes.ZONE_EDIT}?id={id}") { entry ->
                 ZoneEditScreen(

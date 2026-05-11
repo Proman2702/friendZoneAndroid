@@ -3,15 +3,20 @@ package com.friendzone.android.presentation.account
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -19,7 +24,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 private val AccountPageBackground = Color(0xFF120D33)
 private val AccountCardBackground = Color(0xFFFAFAFC)
@@ -39,17 +48,26 @@ private val AccountDanger = Color(0xFFFF4B4B)
 
 @Composable
 fun AccountScreen(
-    onLogout: () -> Unit
+    onOpenInvitations: () -> Unit,
+    onLogout: () -> Unit,
+    viewModel: AccountViewModel = hiltViewModel()
 ) {
+    val state by viewModel.state.collectAsState()
     var allowNotifications by remember { mutableStateOf(true) }
     var autoAcceptInvites by remember { mutableStateOf(true) }
     var privateProfile by remember { mutableStateOf(true) }
+    var historyDialogVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(AccountPageBackground)
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -62,13 +80,13 @@ fun AccountScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Proman2702",
+                            text = state.userName,
                             color = AccountText,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "proman2702@gmail.com",
+                            text = state.userEmail,
                             color = AccountText,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
@@ -109,11 +127,13 @@ fun AccountScreen(
         ) {
             ActionChip(
                 title = "Приглашения",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onOpenInvitations
             )
             ActionChip(
                 title = "История",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { historyDialogVisible = true }
             )
         }
 
@@ -142,25 +162,45 @@ fun AccountScreen(
                 .clickable(onClick = onLogout)
         )
     }
+
+    if (historyDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { historyDialogVisible = false },
+            title = { Text("История") },
+            text = { Text("Пока пусто. Здесь будет история из базы данных.") },
+            confirmButton = {
+                TextButton(onClick = { historyDialogVisible = false }) {
+                    Text("Закрыть")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ActionChip(
     title: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = AccountAccent)
     ) {
-        Text(
-            text = title,
-            color = Color.White,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -178,14 +218,16 @@ private fun AccountSwitchRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
                 color = AccountText,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 20.dp)
             )
             Switch(
                 checked = checked,

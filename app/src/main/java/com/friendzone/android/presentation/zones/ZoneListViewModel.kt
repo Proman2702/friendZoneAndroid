@@ -3,6 +3,7 @@ package com.friendzone.android.presentation.zones
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.data.local.AppPreferences
+import com.friendzone.android.data.repository.FriendsRepository
 import com.friendzone.android.data.repository.ZoneRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -17,21 +18,25 @@ data class ZoneUi(
     val centerLat: Double,
     val centerLon: Double,
     val radiusMeters: Double,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val detectorFriendIds: List<String>
 )
 
 data class ZoneListState(
     val isLoading: Boolean = false,
     val zones: List<ZoneUi> = emptyList(),
+    val friends: List<FriendOptionUi> = emptyList(),
     val error: String? = null,
     val apiBaseUrl: String = "",
-    val message: String? = null
+    val message: String? = null,
+    val maxRadiusMeters: Int = 2000
 )
 
 @HiltViewModel
 class ZoneListViewModel @Inject constructor(
     private val repository: ZoneRepository,
-    private val prefs: AppPreferences
+    private val prefs: AppPreferences,
+    private val friendsRepository: FriendsRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ZoneListState())
     val state: StateFlow<ZoneListState> = _state
@@ -60,11 +65,18 @@ class ZoneListViewModel @Inject constructor(
     fun loadZones() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            runCatching { repository.listZones() }
-                .onSuccess { zones ->
+            runCatching {
+                Triple(
+                    repository.listZones(),
+                    friendsRepository.listFriends(),
+                    prefs.maxRadius.first()
+                )
+            }.onSuccess { (zones, friends, maxRadius) ->
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        zones = zones.map { it.toUi() }
+                        zones = zones.map { it.toUi() },
+                        friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
+                        maxRadiusMeters = maxRadius
                     )
                 }
                 .onFailure { error ->
@@ -84,8 +96,9 @@ class ZoneListViewModel @Inject constructor(
                     name = zone.name,
                     centerLat = zone.centerLat,
                     centerLon = zone.centerLon,
-                    radiusMeters = zone.radiusMeters.coerceAtLeast(50.0),
-                    isActive = zone.isActive
+                    radiusMeters = zone.radiusMeters.coerceIn(50.0, _state.value.maxRadiusMeters.toDouble()),
+                    isActive = zone.isActive,
+                    detectorFriendIds = zone.detectorFriendIds
                 )
             }.onSuccess {
                 _state.value = _state.value.copy(message = "Зона обновлена")
@@ -124,7 +137,8 @@ class ZoneListViewModel @Inject constructor(
             centerLat = centerLat,
             centerLon = centerLon,
             radiusMeters = radiusMeters,
-            isActive = isActive
+            isActive = isActive,
+            detectorFriendIds = detectorFriendIds
         )
     }
 }

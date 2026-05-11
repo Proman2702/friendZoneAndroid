@@ -72,9 +72,7 @@ fun ZoneListScreen(
         if (query.isBlank()) {
             state.zones
         } else {
-            state.zones.filter { zone ->
-                zone.name.contains(query, ignoreCase = true)
-            }
+            state.zones.filter { zone -> zone.name.contains(query, ignoreCase = true) }
         }
     }
     val editingZone = state.zones.firstOrNull { it.id == editingZoneId }
@@ -109,6 +107,9 @@ fun ZoneListScreen(
                             val expanded = zone.id in expandedIds
                             ZoneCard(
                                 zone = zone,
+                                friendNames = zone.detectorFriendIds.mapNotNull { friendId ->
+                                    state.friends.firstOrNull { it.id == friendId }?.displayName
+                                },
                                 expanded = expanded,
                                 icon = iconForZone(zone, state.zones.indexOfFirst { it.id == zone.id }),
                                 onToggleExpand = {
@@ -118,7 +119,10 @@ fun ZoneListScreen(
                                         expandedIds.add(zone.id)
                                     }
                                 },
-                                onEdit = { editingZoneId = zone.id }
+                                onEdit = {
+                                    viewModel.loadZones()
+                                    editingZoneId = zone.id
+                                }
                             )
                         }
                     }
@@ -129,8 +133,8 @@ fun ZoneListScreen(
         state.message?.let { message ->
             Card(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
                     .clickable { viewModel.clearMessage() },
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f))
             ) {
@@ -150,13 +154,17 @@ fun ZoneListScreen(
             initialName = editingZone.name,
             initialRadius = editingZone.radiusMeters.toInt().toString(),
             initialIsActive = editingZone.isActive,
+            maxRadiusMeters = state.maxRadiusMeters,
+            friends = state.friends,
+            initialDetectorFriendIds = editingZone.detectorFriendIds,
             onDismiss = { editingZoneId = null },
-            onConfirm = { name, radius, isActive ->
+            onConfirm = { name, radius, isActive, detectorFriendIds ->
                 viewModel.updateZone(
                     editingZone.copy(
                         name = name,
                         radiusMeters = radius,
-                        isActive = isActive
+                        isActive = isActive,
+                        detectorFriendIds = detectorFriendIds
                     )
                 )
                 editingZoneId = null
@@ -239,6 +247,7 @@ private fun ErrorState(message: String) {
 @Composable
 private fun ZoneCard(
     zone: ZoneUi,
+    friendNames: List<String>,
     expanded: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onToggleExpand: () -> Unit,
@@ -282,7 +291,7 @@ private fun ZoneCard(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "${zone.radiusMeters.toInt()} м.",
+                            text = "${zone.radiusMeters.toInt()} м",
                             color = ZonesAccent,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
@@ -316,21 +325,25 @@ private fun ZoneCard(
                     ) {
                         Column {
                             Text(
-                                text = "Уведомлять об обнаружении:",
+                                text = "Обнаружение",
                                 color = ZonesText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "• Вы (создатель)",
+                                text = "• Вы",
                                 color = Color.White,
                                 modifier = Modifier.padding(top = 6.dp)
                             )
-                            Text(
-                                text = "• Локальная зона",
-                                color = Color.White,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
+                            if (friendNames.isNotEmpty()) {
+                                friendNames.forEach { friendName ->
+                                    Text(
+                                        text = "• $friendName",
+                                        color = Color.White,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

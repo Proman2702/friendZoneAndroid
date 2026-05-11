@@ -1,23 +1,22 @@
 package com.friendzone.android.presentation.friends
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,7 +25,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 private val FriendsPageBackground = Color(0xFF120D33)
 private val FriendsCardBackground = Color(0xFFFAFAFC)
@@ -43,30 +46,25 @@ private val FriendsAccent = Color(0xFFE3874F)
 private val FriendsBlue = Color(0xFF57AFE6)
 private val FriendsText = Color(0xFF1C1840)
 
-private data class FriendStubUi(
-    val name: String,
-    val tag: String,
-    val muted: Boolean,
-    val distanceMeters: Int
-)
-
-private val demoFriends = listOf(
-    FriendStubUi("Бурда", "@obezyana1487", true, 1000),
-    FriendStubUi("Махмадрозик", "@sviina_halal", false, 500),
-    FriendStubUi("Аошаоушоцщцшоа", "@uyauuyoaouyoaouuyuoqusha", false, 1)
-)
-
 @Composable
-fun FriendsScreen() {
+fun FriendsScreen(
+    viewModel: FriendsViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
     var filterText by remember { mutableStateOf("") }
+    var editingFriend by remember { mutableStateOf<FriendUi?>(null) }
 
-    val filteredFriends = remember(filterText) {
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
+
+    val filteredFriends = remember(state.friends, filterText) {
         val query = filterText.trim()
         if (query.isBlank()) {
-            demoFriends
+            state.friends
         } else {
-            demoFriends.filter { friend ->
-                friend.name.contains(query, ignoreCase = true) ||
+            state.friends.filter { friend ->
+                friend.displayName.contains(query, ignoreCase = true) ||
                     friend.tag.contains(query, ignoreCase = true)
             }
         }
@@ -95,10 +93,37 @@ fun FriendsScreen() {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredFriends) { friend ->
-                    FriendCard(friend = friend)
+                    FriendCard(friend = friend, onEdit = { editingFriend = friend })
                 }
             }
         }
+
+        state.message?.let { message ->
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .clickable { viewModel.clearMessage() },
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f))
+            ) {
+                Text(
+                    text = message,
+                    color = FriendsText,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+        }
+    }
+
+    if (editingFriend != null) {
+        RenameFriendDialog(
+            friend = editingFriend!!,
+            onDismiss = { editingFriend = null },
+            onConfirm = { friendId, displayName ->
+                viewModel.renameFriend(friendId, displayName)
+                editingFriend = null
+            }
+        )
     }
 }
 
@@ -124,7 +149,9 @@ private fun FilterField(
             )
         )
         Card(
-            modifier = Modifier.padding(start = 10.dp, top = 0.dp),
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .offset(y = (-6).dp),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
@@ -139,78 +166,72 @@ private fun FilterField(
 }
 
 @Composable
-private fun FriendCard(friend: FriendStubUi) {
+private fun FriendCard(
+    friend: FriendUi,
+    onEdit: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = FriendsCardBackground)
     ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = friend.name,
-                        color = FriendsText,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = friend.tag,
-                        color = FriendsAccent,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                IconButton(onClick = { }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Редактировать друга",
-                        tint = FriendsText
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(FriendsAccent)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = if (friend.muted) Icons.Default.Close else Icons.Default.Check,
-                    contentDescription = null,
-                    tint = FriendsBlue,
-                    modifier = Modifier.size(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = friend.displayName,
+                    color = FriendsText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = if (friend.muted) "Не уведомлять" else "Уведомлять",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 8.dp)
+                    text = friend.tag,
+                    color = FriendsAccent,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Reply,
-                        contentDescription = null,
-                        tint = FriendsBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "${friend.distanceMeters} м.",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
+            }
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Переименовать друга",
+                    tint = FriendsText
+                )
             }
         }
     }
+}
+
+@Composable
+private fun RenameFriendDialog(
+    friend: FriendUi,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var name by remember(friend.id) { mutableStateOf(friend.displayName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Имя друга") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text("Отображаемое имя") }
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(friend.id, name) }) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
 }

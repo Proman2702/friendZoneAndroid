@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -27,7 +28,18 @@ class SettingsViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(apiBaseUrl = prefs.apiBaseUrl.first())
+            val apiBaseUrl = prefs.apiBaseUrl.first()
+            val maxMarkers = prefs.maxMarkers.first()
+            val maxRadius = prefs.maxRadius.first()
+            val onlyOwnMarkers = prefs.onlyOwnMarkers.first()
+            val notifyAboutFriend = prefs.notifyAboutFriend.first()
+            _state.value = SettingsState(
+                apiBaseUrl = apiBaseUrl,
+                maxMarkers = maxMarkers.toString(),
+                maxRadius = maxRadius.toString(),
+                onlyOwnMarkers = onlyOwnMarkers,
+                notifyAboutFriend = notifyAboutFriend
+            )
         }
     }
 
@@ -61,6 +73,12 @@ class SettingsViewModel @Inject constructor(
             }
             val normalized = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
             prefs.setApiBaseUrl(normalized)
+            prefs.saveMapSettings(
+                maxMarkers = _state.value.maxMarkers.toIntOrNull()?.coerceAtLeast(1) ?: 20,
+                maxRadius = _state.value.maxRadius.toIntOrNull()?.coerceAtLeast(50) ?: 2000,
+                onlyOwnMarkers = _state.value.onlyOwnMarkers,
+                notifyAboutFriend = _state.value.notifyAboutFriend
+            )
             _state.value = _state.value.copy(apiBaseUrl = normalized)
         }
     }

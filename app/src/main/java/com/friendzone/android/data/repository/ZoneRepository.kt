@@ -23,7 +23,8 @@ class ZoneRepository(
         centerLat: Double,
         centerLon: Double,
         radiusMeters: Double,
-        isActive: Boolean
+        isActive: Boolean,
+        detectorFriendIds: List<String> = emptyList()
     ): ZoneDto {
         val zones = prefs.getLocalZones()
         val zone = ZoneDto(
@@ -32,7 +33,8 @@ class ZoneRepository(
             centerLat = centerLat,
             centerLon = centerLon,
             radiusMeters = radiusMeters,
-            isActive = isActive
+            isActive = isActive,
+            detectorFriendIds = detectorFriendIds
         )
         prefs.saveLocalZones(zones + zone)
         return zone
@@ -48,7 +50,8 @@ class ZoneRepository(
         centerLat: Double,
         centerLon: Double,
         radiusMeters: Double,
-        isActive: Boolean
+        isActive: Boolean,
+        detectorFriendIds: List<String> = emptyList()
     ): ZoneDto {
         val updatedZone = ZoneDto(
             id = zoneId,
@@ -56,7 +59,8 @@ class ZoneRepository(
             centerLat = centerLat,
             centerLon = centerLon,
             radiusMeters = radiusMeters,
-            isActive = isActive
+            isActive = isActive,
+            detectorFriendIds = detectorFriendIds
         )
         val updatedZones = prefs.getLocalZones().map { existing ->
             if (existing.id == zoneId) updatedZone else existing

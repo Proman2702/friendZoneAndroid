@@ -1,9 +1,9 @@
 package com.friendzone.android.data.local
 
 import android.content.Context
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.friendzone.android.BuildConfig
@@ -24,6 +24,12 @@ class AppPreferences(private val context: Context) {
     private val userEmailKey = stringPreferencesKey("user_email")
     private val isLoggedInKey = booleanPreferencesKey("is_logged_in")
     private val localZonesKey = stringPreferencesKey("local_zones_json")
+    private val localFriendsKey = stringPreferencesKey("local_friends_json")
+    private val localInvitationsKey = stringPreferencesKey("local_invitations_json")
+    private val maxMarkersKey = intPreferencesKey("max_markers")
+    private val maxRadiusKey = intPreferencesKey("max_radius")
+    private val onlyOwnMarkersKey = booleanPreferencesKey("only_own_markers")
+    private val notifyAboutFriendKey = booleanPreferencesKey("notify_about_friend")
 
     val installId: Flow<String?> = context.dataStore.data.map { it[installIdKey] }
     val clientId: Flow<String?> = context.dataStore.data.map { it[clientIdKey] }
@@ -31,6 +37,10 @@ class AppPreferences(private val context: Context) {
     val userName: Flow<String?> = context.dataStore.data.map { it[userNameKey] }
     val userEmail: Flow<String?> = context.dataStore.data.map { it[userEmailKey] }
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[isLoggedInKey] ?: false }
+    val maxMarkers: Flow<Int> = context.dataStore.data.map { it[maxMarkersKey] ?: 20 }
+    val maxRadius: Flow<Int> = context.dataStore.data.map { it[maxRadiusKey] ?: 2000 }
+    val onlyOwnMarkers: Flow<Boolean> = context.dataStore.data.map { it[onlyOwnMarkersKey] ?: true }
+    val notifyAboutFriend: Flow<Boolean> = context.dataStore.data.map { it[notifyAboutFriendKey] ?: true }
 
     suspend fun setInstallId(value: String) {
         context.dataStore.edit { it[installIdKey] = value }
@@ -55,8 +65,21 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[isLoggedInKey] = value }
     }
 
+    suspend fun saveMapSettings(
+        maxMarkers: Int,
+        maxRadius: Int,
+        onlyOwnMarkers: Boolean,
+        notifyAboutFriend: Boolean
+    ) {
+        context.dataStore.edit {
+            it[maxMarkersKey] = maxMarkers
+            it[maxRadiusKey] = maxRadius
+            it[onlyOwnMarkersKey] = onlyOwnMarkers
+            it[notifyAboutFriendKey] = notifyAboutFriend
+        }
+    }
+
     suspend fun getLocalZones(): List<ZoneDto> {
-        // Временно храним зоны одним JSON-массивом, чтобы не поднимать отдельную БД.
         val raw = context.dataStore.data.map { it[localZonesKey] ?: "[]" }.first()
         return parseZones(raw)
     }
@@ -73,6 +96,50 @@ class AppPreferences(private val context: Context) {
                             put("centerLon", zone.centerLon)
                             put("radiusMeters", zone.radiusMeters)
                             put("isActive", zone.isActive)
+                            put("detectorFriendIds", JSONArray(zone.detectorFriendIds))
+                        }
+                    )
+                }
+            }.toString()
+        }
+    }
+
+    suspend fun getLocalFriends(): List<LocalFriendDto> {
+        val raw = context.dataStore.data.map { it[localFriendsKey] ?: "[]" }.first()
+        return parseFriends(raw)
+    }
+
+    suspend fun saveLocalFriends(friends: List<LocalFriendDto>) {
+        context.dataStore.edit {
+            it[localFriendsKey] = JSONArray().apply {
+                friends.forEach { friend ->
+                    put(
+                        JSONObject().apply {
+                            put("id", friend.id)
+                            put("tag", friend.tag)
+                            put("displayName", friend.displayName)
+                        }
+                    )
+                }
+            }.toString()
+        }
+    }
+
+    suspend fun getLocalInvitations(): List<LocalInvitationDto> {
+        val raw = context.dataStore.data.map { it[localInvitationsKey] ?: "[]" }.first()
+        return parseInvitations(raw)
+    }
+
+    suspend fun saveLocalInvitations(invitations: List<LocalInvitationDto>) {
+        context.dataStore.edit {
+            it[localInvitationsKey] = JSONArray().apply {
+                invitations.forEach { invitation ->
+                    put(
+                        JSONObject().apply {
+                            put("id", invitation.id)
+                            put("tag", invitation.tag)
+                            put("displayName", invitation.displayName)
+                            put("isIncoming", invitation.isIncoming)
                         }
                     )
                 }
@@ -82,7 +149,6 @@ class AppPreferences(private val context: Context) {
 
     private fun parseZones(raw: String): List<ZoneDto> {
         return runCatching {
-            // Если JSON повредится, просто вернём пустой список и не уроним экран карты.
             val jsonArray = JSONArray(raw)
             buildList {
                 for (index in 0 until jsonArray.length()) {
@@ -94,7 +160,53 @@ class AppPreferences(private val context: Context) {
                             centerLat = item.optDouble("centerLat"),
                             centerLon = item.optDouble("centerLon"),
                             radiusMeters = item.optDouble("radiusMeters"),
-                            isActive = item.optBoolean("isActive")
+                            isActive = item.optBoolean("isActive"),
+                            detectorFriendIds = item.optJSONArray("detectorFriendIds")
+                                ?.let { ids ->
+                                    buildList {
+                                        for (idIndex in 0 until ids.length()) {
+                                            add(ids.optString(idIndex))
+                                        }
+                                    }
+                                }
+                                ?: emptyList()
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun parseFriends(raw: String): List<LocalFriendDto> {
+        return runCatching {
+            val jsonArray = JSONArray(raw)
+            buildList {
+                for (index in 0 until jsonArray.length()) {
+                    val item = jsonArray.optJSONObject(index) ?: continue
+                    add(
+                        LocalFriendDto(
+                            id = item.optString("id"),
+                            tag = item.optString("tag"),
+                            displayName = item.optString("displayName")
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun parseInvitations(raw: String): List<LocalInvitationDto> {
+        return runCatching {
+            val jsonArray = JSONArray(raw)
+            buildList {
+                for (index in 0 until jsonArray.length()) {
+                    val item = jsonArray.optJSONObject(index) ?: continue
+                    add(
+                        LocalInvitationDto(
+                            id = item.optString("id"),
+                            tag = item.optString("tag"),
+                            displayName = item.optString("displayName"),
+                            isIncoming = item.optBoolean("isIncoming")
                         )
                     )
                 }
@@ -102,5 +214,3 @@ class AppPreferences(private val context: Context) {
         }.getOrDefault(emptyList())
     }
 }
-
-

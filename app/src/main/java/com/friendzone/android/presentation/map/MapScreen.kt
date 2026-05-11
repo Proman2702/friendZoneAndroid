@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -107,15 +105,6 @@ fun MapScreen(
 
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .background(MapChromeColor)
-            )
-
-            // Флажок всегда остаётся в центре и показывает точку создания новой зоны.
-            Box(
-                modifier = Modifier
                     .align(Alignment.Center)
                     .padding(bottom = 32.dp),
                 contentAlignment = Alignment.Center
@@ -196,9 +185,12 @@ fun MapScreen(
             initialName = "",
             initialRadius = "300",
             initialIsActive = true,
+            maxRadiusMeters = state.maxRadiusMeters,
+            friends = state.friends,
+            initialDetectorFriendIds = emptyList(),
             onDismiss = viewModel::dismissCreateDialog,
-            onConfirm = { name, radius, _ ->
-                viewModel.createZone(name = name, radiusMeters = radius)
+            onConfirm = { name, radius, _, detectorFriendIds ->
+                viewModel.createZone(name, radius, detectorFriendIds)
             }
         )
     }
@@ -210,13 +202,17 @@ fun MapScreen(
             initialName = selectedZone.name,
             initialRadius = selectedZone.radiusMeters.toInt().toString(),
             initialIsActive = selectedZone.isActive,
+            maxRadiusMeters = state.maxRadiusMeters,
+            friends = state.friends,
+            initialDetectorFriendIds = selectedZone.detectorFriendIds,
             onDismiss = viewModel::clearSelectedZone,
-            onConfirm = { name, radius, isActive ->
+            onConfirm = { name, radius, isActive, detectorFriendIds ->
                 viewModel.updateZone(
                     selectedZone.copy(
                         name = name,
                         radiusMeters = radius,
-                        isActive = isActive
+                        isActive = isActive,
+                        detectorFriendIds = detectorFriendIds
                     )
                 )
             },
@@ -283,7 +279,6 @@ private fun FriendZoneMap(
                 controller.setZoom(15.0)
                 controller.setCenter(GeoPoint(55.751244, 37.618423))
 
-                // Центр карты нужен ViewModel, потому что новая зона создаётся именно в этой точке.
                 addMapListener(object : MapAdapter() {
                     override fun onScroll(event: ScrollEvent?): Boolean {
                         val center = mapCenter
@@ -306,7 +301,6 @@ private fun FriendZoneMap(
         },
         update = { mapView ->
             if (focusTarget != null && focusTarget.requestId != appliedFocusRequestId) {
-                // Применяем переход к найденному месту только один раз на конкретный запрос.
                 mapView.controller.setZoom(focusTarget.zoom)
                 mapView.controller.animateTo(GeoPoint(focusTarget.latitude, focusTarget.longitude))
                 onFocusApplied(focusTarget.requestId)
@@ -315,6 +309,9 @@ private fun FriendZoneMap(
             mapView.overlays.removeAll { overlay ->
                 overlay is Marker || (overlay is Polygon && overlay.title == "zoneOverlay")
             }
+
+            val circles = mutableListOf<Polygon>()
+            val markers = mutableListOf<Marker>()
 
             zones.forEach { zone ->
                 val point = GeoPoint(zone.centerLat, zone.centerLon)
@@ -327,7 +324,6 @@ private fun FriendZoneMap(
                     isDraggable = true
                     relatedObject = zone.id
                     setOnMarkerClickListener { clickedMarker, _ ->
-                        // ID держим в relatedObject, чтобы не искать зону по координатам или title.
                         val clickedId = clickedMarker.relatedObject as? String ?: return@setOnMarkerClickListener true
                         onZoneClick(clickedId)
                         true
@@ -357,9 +353,12 @@ private fun FriendZoneMap(
                     }
                 }
 
-                mapView.overlays.add(circle)
-                mapView.overlays.add(marker)
+                circles.add(circle)
+                markers.add(marker)
             }
+
+            mapView.overlays.addAll(circles)
+            mapView.overlays.addAll(markers)
 
             mapView.invalidate()
         }

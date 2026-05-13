@@ -1,0 +1,4 @@
+{
+  "code": "VALIDATION_ERROR",
+  "message": "centerLat должно быть меньше, чем или равно 90.0"
+}

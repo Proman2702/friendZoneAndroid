@@ -1,0 +1,4 @@
+{
+  "code": "VALIDATION_ERROR",
+  "message": "lat должно быть меньше, чем или равно 90.0"
+}

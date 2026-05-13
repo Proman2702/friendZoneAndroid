@@ -1,0 +1,9 @@
+{
+  "id": "8f8a4667-1d25-4743-b682-d7ac06c8805c",
+  "name": "Home Zone",
+  "centerLat": 44.4268,
+  "centerLon": 26.1025,
+  "radiusMeters": 300.0,
+  "isActive": true,
+  "active": true
+}

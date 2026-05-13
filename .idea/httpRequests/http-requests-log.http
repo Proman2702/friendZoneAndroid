@@ -1,0 +1,318 @@
+DELETE http://localhost:8080/zones/00000000-0000-0000-0000-000000000099?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+content-length: 0
+
+<> 2026-03-28T130222.404.json
+
+###
+
+PATCH http://localhost:8080/zones/00000000-0000-0000-0000-000000000099
+Content-Type: application/json
+Content-Length: 81
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Should Fail"
+}
+
+<> 2026-03-28T130219.404.json
+
+###
+
+POST http://localhost:8080/locations
+Content-Type: application/json
+Content-Length: 150
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "lat": 100.0,
+  "lon": 26.1025,
+  "accuracy": 10.0,
+  "deviceTime": "2026-03-25T16:00:00Z"
+}
+
+<> 2026-03-28T130215.400.json
+
+###
+
+POST http://localhost:8080/zones
+Content-Type: application/json
+Content-Length: 181
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Invalid Radius Zone",
+  "centerLat": 44.4268,
+  "centerLon": 26.1025,
+  "radiusMeters": -1.0,
+  "isActive": true
+}
+
+<> 2026-03-28T130206.400.json
+
+###
+
+POST http://localhost:8080/zones
+Content-Type: application/json
+Content-Length: 173
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Invalid Zone",
+  "centerLat": 120.0,
+  "centerLon": 26.1025,
+  "radiusMeters": 300.0,
+  "isActive": true
+}
+
+<> 2026-03-28T130156.400.json
+
+###
+
+GET http://localhost:8080/zones?clientId=00000000-0000-0000-0000-000000000001
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T130151.404.json
+
+###
+
+GET http://localhost:8080/events?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T130141.200.json
+
+###
+
+DELETE http://localhost:8080/zones/8f8a4667-1d25-4743-b682-d7ac06c8805c?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+content-length: 0
+
+<> 2026-03-28T125239.500.json
+
+###
+
+DELETE http://localhost:8080/zones/8f8a4667-1d25-4743-b682-d7ac06c8805c?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+content-length: 0
+
+<> 2026-03-28T125217.500.json
+
+###
+
+GET http://localhost:8080/events?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T125208.200.json
+
+###
+
+POST http://localhost:8080/locations/batch
+Content-Type: application/json
+Content-Length: 450
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "samples": [
+    {
+      "lat": 44.43750,
+      "lon": 26.12300,
+      "accuracy": 9.0,
+      "deviceTime": "2026-03-25T15:01:00Z"
+    },
+    {
+      "lat": 44.43800,
+      "lon": 26.12350,
+      "accuracy": 9.0,
+      "deviceTime": "2026-03-25T15:01:05Z"
+    },
+    {
+      "lat": 44.43850,
+      "lon": 26.12400,
+      "accuracy": 9.0,
+      "deviceTime": "2026-03-25T15:01:10Z"
+    }
+  ]
+}
+
+<> 2026-03-28T125203.200.json
+
+###
+
+PATCH http://localhost:8080/zones/8f8a4667-1d25-4743-b682-d7ac06c8805c
+Content-Type: application/json
+Content-Length: 107
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Office Zone Final",
+  "isActive": true
+}
+
+<> 2026-03-28T125153.200.json
+
+###
+
+GET http://localhost:8080/events?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T125147.200.json
+
+###
+
+POST http://localhost:8080/locations/batch
+Content-Type: application/json
+Content-Length: 450
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "samples": [
+    {
+      "lat": 44.42690,
+      "lon": 26.10240,
+      "accuracy": 8.0,
+      "deviceTime": "2026-03-25T15:00:10Z"
+    },
+    {
+      "lat": 44.42685,
+      "lon": 26.10245,
+      "accuracy": 8.0,
+      "deviceTime": "2026-03-25T15:00:15Z"
+    },
+    {
+      "lat": 44.42680,
+      "lon": 26.10250,
+      "accuracy": 8.0,
+      "deviceTime": "2026-03-25T15:00:20Z"
+    }
+  ]
+}
+
+<> 2026-03-28T125140.200.json
+
+###
+
+POST http://localhost:8080/locations
+Content-Type: application/json
+Content-Length: 152
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "lat": 44.4368,
+  "lon": 26.1225,
+  "accuracy": 10.0,
+  "deviceTime": "2026-03-25T15:00:00Z"
+}
+
+<> 2026-03-28T125130.200.json
+
+###
+
+GET http://localhost:8080/zones?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T125121.200.json
+
+###
+
+PATCH http://localhost:8080/zones/8f8a4667-1d25-4743-b682-d7ac06c8805c
+Content-Type: application/json
+Content-Length: 132
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Home Zone Updated",
+  "radiusMeters": 350.0,
+  "isActive": true
+}
+
+<> 2026-03-28T125118.200.json
+
+###
+
+GET http://localhost:8080/zones?clientId=ebfab8bb-0ec1-4712-abf5-9dd895ceef9a
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+<> 2026-03-28T125113.200.json
+
+###
+
+POST http://localhost:8080/zones
+Content-Type: application/json
+Content-Length: 172
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "clientId": "ebfab8bb-0ec1-4712-abf5-9dd895ceef9a",
+  "name": "Home Zone",
+  "centerLat": 44.4268,
+  "centerLon": 26.1025,
+  "radiusMeters": 300.0,
+  "isActive": true
+}
+
+<> 2026-03-28T125106.200.json
+
+###
+
+POST http://localhost:8080/clients/register
+Content-Type: application/json
+Content-Length: 44
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.3.2
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "installId": "android-phase2-test-001"
+}
+
+<> 2026-03-28T125100.200.json
+
+###
+

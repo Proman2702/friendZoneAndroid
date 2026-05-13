@@ -2,20 +2,19 @@ package com.friendzone.android.data.repository
 
 import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.remote.FriendZoneApi
+import com.friendzone.android.data.remote.dto.ZoneCreateRequest
 import com.friendzone.android.data.remote.dto.ZoneDto
-import java.util.UUID
+import com.friendzone.android.data.remote.dto.ZoneUpdateRequest
+import kotlinx.coroutines.flow.first
 
 class ZoneRepository(
     private val api: FriendZoneApi,
     private val prefs: AppPreferences
 ) {
     suspend fun listZones(): List<ZoneDto> {
-        // Временно работаем только с локальным списком зон.
-        return prefs.getLocalZones()
-
-        // Возврат к серверу:
-        // val clientId = requireClientId()
-        // return api.getZones(clientId)
+        ensureLoggedIn()
+        return runCatching { api.getZones() }
+            .getOrElse { throw it.toReadableException() }
     }
 
     suspend fun createZone(
@@ -26,22 +25,19 @@ class ZoneRepository(
         isActive: Boolean,
         detectorFriendIds: List<String> = emptyList()
     ): ZoneDto {
-        val zones = prefs.getLocalZones()
-        val zone = ZoneDto(
-            id = UUID.randomUUID().toString(),
-            name = name.trim(),
-            centerLat = centerLat,
-            centerLon = centerLon,
-            radiusMeters = radiusMeters,
-            isActive = isActive,
-            detectorFriendIds = detectorFriendIds
-        )
-        prefs.saveLocalZones(zones + zone)
-        return zone
-
-        // Возврат к серверу:
-        // val clientId = requireClientId()
-        // return api.createZone(...)
+        ensureLoggedIn()
+        return runCatching {
+            api.createZone(
+                ZoneCreateRequest(
+                    name = name.trim(),
+                    centerLat = centerLat,
+                    centerLon = centerLon,
+                    radiusMeters = radiusMeters,
+                    isActive = isActive,
+                    notifyFriendIds = detectorFriendIds
+                )
+            )
+        }.getOrElse { throw it.toReadableException() }
     }
 
     suspend fun updateZone(
@@ -53,36 +49,35 @@ class ZoneRepository(
         isActive: Boolean,
         detectorFriendIds: List<String> = emptyList()
     ): ZoneDto {
-        val updatedZone = ZoneDto(
-            id = zoneId,
-            name = name.trim(),
-            centerLat = centerLat,
-            centerLon = centerLon,
-            radiusMeters = radiusMeters,
-            isActive = isActive,
-            detectorFriendIds = detectorFriendIds
-        )
-        val updatedZones = prefs.getLocalZones().map { existing ->
-            if (existing.id == zoneId) updatedZone else existing
-        }
-        prefs.saveLocalZones(updatedZones)
-        return updatedZone
-
-        // Возврат к серверу:
-        // val clientId = requireClientId()
-        // return api.updateZone(...)
+        ensureLoggedIn()
+        return runCatching {
+            api.updateZone(
+                zoneId = zoneId,
+                request = ZoneUpdateRequest(
+                    name = name.trim(),
+                    centerLat = centerLat,
+                    centerLon = centerLon,
+                    radiusMeters = radiusMeters,
+                    isActive = isActive,
+                    notifyFriendIds = detectorFriendIds
+                )
+            )
+        }.getOrElse { throw it.toReadableException() }
     }
 
     suspend fun deleteZone(zoneId: String) {
-        val updatedZones = prefs.getLocalZones().filterNot { it.id == zoneId }
-        prefs.saveLocalZones(updatedZones)
-
-        // Возврат к серверу:
-        // val clientId = requireClientId()
-        // api.deleteZone(zoneId, clientId)
+        ensureLoggedIn()
+        runCatching { api.deleteZone(zoneId) }
+            .getOrElse { throw it.toReadableException() }
     }
 
     suspend fun getZone(zoneId: String): ZoneDto? {
-        return prefs.getLocalZones().firstOrNull { it.id == zoneId }
+        return listZones().firstOrNull { it.id == zoneId }
+    }
+
+    private suspend fun ensureLoggedIn() {
+        if (prefs.accessToken.first().isNullOrBlank()) {
+            error("Login required")
+        }
     }
 }

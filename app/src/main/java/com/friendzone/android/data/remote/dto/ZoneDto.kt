@@ -7,7 +7,6 @@ data class ZoneDto(
     val centerLon: Double,
     val radiusMeters: Double,
     val isActive: Boolean,
-    val detectorFriendIds: List<String> = emptyList()
+    val notifyFriendIds: List<String> = emptyList()
 )
-
 

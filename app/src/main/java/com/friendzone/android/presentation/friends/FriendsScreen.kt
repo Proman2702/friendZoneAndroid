@@ -14,13 +14,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -32,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,21 +45,20 @@ fun FriendsScreen(
     viewModel: FriendsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var filterText by remember { mutableStateOf("") }
-    var editingFriend by remember { mutableStateOf<FriendUi?>(null) }
+    val filterState = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.load()
     }
 
-    val filteredFriends = remember(state.friends, filterText) {
-        val query = filterText.trim()
+    val query = filterState.value.trim()
+    val filteredFriends = remember(state.friends, query) {
         if (query.isBlank()) {
             state.friends
         } else {
             state.friends.filter { friend ->
                 friend.displayName.contains(query, ignoreCase = true) ||
-                    friend.tag.contains(query, ignoreCase = true)
+                    friend.login.contains(query, ignoreCase = true)
             }
         }
     }
@@ -82,8 +75,8 @@ fun FriendsScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             FilterField(
-                value = filterText,
-                onValueChange = { filterText = it }
+                value = filterState.value,
+                onValueChange = { filterState.value = it }
             )
 
             LazyColumn(
@@ -92,8 +85,12 @@ fun FriendsScreen(
                     .padding(top = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredFriends) { friend ->
-                    FriendCard(friend = friend, onEdit = { editingFriend = friend })
+                if (filteredFriends.isEmpty()) {
+                    item { EmptyFriendsCard() }
+                } else {
+                    items(filteredFriends, key = { it.id }) { friend ->
+                        FriendCard(friend = friend, onRemove = { viewModel.removeFriend(friend.id) })
+                    }
                 }
             }
         }
@@ -113,18 +110,6 @@ fun FriendsScreen(
                 )
             }
         }
-    }
-
-    editingFriend?.let { friend ->
-        FriendDialog(
-            friend = friend,
-            onDismiss = { editingFriend = null },
-            onSave = { friendId, displayName, latitude, longitude ->
-                viewModel.renameFriend(friendId, displayName)
-                viewModel.updateFriendLocation(friendId, latitude, longitude)
-                editingFriend = null
-            }
-        )
     }
 }
 
@@ -157,7 +142,7 @@ private fun FilterField(
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Text(
-                text = "Фильтр",
+                text = "Filter",
                 color = FriendsBlue,
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -167,9 +152,23 @@ private fun FilterField(
 }
 
 @Composable
+private fun EmptyFriendsCard() {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = FriendsCardBackground)
+    ) {
+        Text(
+            text = "No friends yet",
+            color = FriendsText,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp)
+        )
+    }
+}
+
+@Composable
 private fun FriendCard(
     friend: FriendUi,
-    onEdit: () -> Unit
+    onRemove: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
@@ -179,9 +178,14 @@ private fun FriendCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .padding(end = 12.dp)
+            ) {
                 Text(
                     text = friend.displayName,
                     color = FriendsText,
@@ -189,80 +193,20 @@ private fun FriendCard(
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = friend.tag,
+                    text = friend.login,
                     color = FriendsAccent,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = friend.locationSummary(),
+                    text = "Friend profile is loaded from backend",
                     color = FriendsBlue,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            IconButton(onClick = onEdit) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Редактировать друга",
-                    tint = FriendsText
-                )
+            TextButton(onClick = onRemove) {
+                Text("Remove", color = FriendsAccent, fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Composable
-private fun FriendDialog(
-    friend: FriendUi,
-    onDismiss: () -> Unit,
-    onSave: (String, String, String, String) -> Unit
-) {
-    var name by remember(friend.id) { mutableStateOf(friend.displayName) }
-    var latitude by remember(friend.id) { mutableStateOf(friend.latitude?.toString().orEmpty()) }
-    var longitude by remember(friend.id) { mutableStateOf(friend.longitude?.toString().orEmpty()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Привязка друга") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    label = { Text("Отображаемое имя") }
-                )
-                OutlinedTextField(
-                    value = latitude,
-                    onValueChange = { latitude = it },
-                    singleLine = true,
-                    label = { Text("Широта") }
-                )
-                OutlinedTextField(
-                    value = longitude,
-                    onValueChange = { longitude = it },
-                    singleLine = true,
-                    label = { Text("Долгота") }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(friend.id, name, latitude, longitude) }) {
-                Text("Сохранить")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Отмена")
-            }
-        }
-    )
-}
-
-private fun FriendUi.locationSummary(): String {
-    return if (latitude != null && longitude != null) {
-        "Широта %.5f, долгота %.5f".format(latitude, longitude)
-    } else {
-        "Геолокация не привязана"
     }
 }

@@ -27,69 +27,58 @@ class AuthViewModel @Inject constructor(
     private val error = MutableStateFlow<String?>(null)
     private val info = MutableStateFlow<String?>(null)
 
+    init {
+        viewModelScope.launch {
+            prefs.clearLegacyProfileData()
+        }
+    }
+
     val state: StateFlow<AuthUiState> = combine(prefs.isLoggedIn, error, info) { isLoggedIn, errorText, infoText ->
         AuthUiState(isLoggedIn, errorText, infoText)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthUiState())
 
-    @Suppress("UNUSED_PARAMETER")
-    fun login(email: String, password: String) {
+    fun login(login: String, password: String) {
+        if (login.isBlank() || password.isBlank()) {
+            error.value = "Fill in login and password"
+            info.value = null
+            return
+        }
+
         viewModelScope.launch {
             error.value = null
             info.value = null
-            prefs.saveUser(
-                name = email.ifBlank { "Гость" },
-                email = email.ifBlank { "guest@friendzone.local" }
-            )
-            prefs.setClientId("stub-client")
-            prefs.setLoggedIn(true)
-
-            // Временная заглушка: вход пропускает пользователя сразу в приложение.
-            // Параметр password пока не используется.
-            // authRepository.login(email, password)
+            runCatching { authRepository.login(login, password) }
+                .onFailure {
+                    error.value = it.message ?: "Login failed"
+                }
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun register(name: String, email: String, password: String, onSuccess: () -> Unit) {
+    fun register(displayName: String, login: String, password: String, onSuccess: () -> Unit) {
+        if (login.isBlank() || password.isBlank()) {
+            error.value = "Fill in login and password"
+            info.value = null
+            return
+        }
+
         viewModelScope.launch {
             error.value = null
             info.value = null
-            prefs.saveUser(
-                name = name.ifBlank { "Гость" },
-                email = email.ifBlank { "guest@friendzone.local" }
-            )
-            prefs.setClientId("stub-client")
-            prefs.setLoggedIn(true)
-            onSuccess()
-
-            // Временная заглушка: реальная регистрация на сервер не выполняется.
-            // Параметр password пока не используется.
-            // authRepository.register(name, email, password)
+            runCatching { authRepository.register(displayName, login, password) }
+                .onSuccess { onSuccess() }
+                .onFailure {
+                    error.value = it.message ?: "Registration failed"
+                }
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun recoverPassword(email: String) {
+    fun recoverPassword(login: String) {
         error.value = null
-        info.value = "Восстановление пароля временно отключено"
-
-        // Временная заглушка: запрос на сервер не отправляется.
-        // if (email.isBlank()) {
-        //     error.value = "Введите почту"
-        //     info.value = null
-        //     return
-        // }
-        // viewModelScope.launch {
-        //     runCatching { authRepository.recoverPassword(email) }
-        //         .onSuccess {
-        //             error.value = null
-        //             info.value = it
-        //         }
-        //         .onFailure {
-        //             error.value = it.message ?: "Не удалось отправить запрос"
-        //             info.value = null
-        //         }
-        // }
+        info.value = if (login.isBlank()) {
+            "Enter login first"
+        } else {
+            "Password recovery is not available in this backend"
+        }
     }
 
     fun logout() {

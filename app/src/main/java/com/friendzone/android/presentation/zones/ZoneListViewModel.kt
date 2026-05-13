@@ -75,7 +75,13 @@ class ZoneListViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         zones = zones.map { it.toUi() },
-                        friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
+                        friends = friends.map {
+                            FriendOptionUi(
+                                id = it.id,
+                                tag = it.login,
+                                displayName = it.displayName?.takeIf(String::isNotBlank) ?: it.login
+                            )
+                        },
                         maxRadiusMeters = maxRadius
                     )
                 }
@@ -138,7 +144,7 @@ class ZoneListViewModel @Inject constructor(
             centerLon = centerLon,
             radiusMeters = radiusMeters,
             isActive = isActive,
-            detectorFriendIds = detectorFriendIds
+            detectorFriendIds = notifyFriendIds
         )
     }
 }

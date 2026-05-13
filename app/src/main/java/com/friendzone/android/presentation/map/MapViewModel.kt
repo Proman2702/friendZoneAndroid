@@ -3,7 +3,6 @@ package com.friendzone.android.presentation.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.data.local.AppPreferences
-import com.friendzone.android.data.local.LocalFriendDto
 import com.friendzone.android.data.local.LocalLocationDto
 import com.friendzone.android.data.repository.FriendsRepository
 import com.friendzone.android.data.repository.LocationRepository
@@ -16,7 +15,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.acos
@@ -97,7 +95,13 @@ class MapViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     isLoading = false,
                     zones = zones.map { it.toUi() },
-                    friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
+                    friends = friends.map {
+                        FriendOptionUi(
+                            id = it.id,
+                            tag = it.login,
+                            displayName = it.displayName?.takeIf(String::isNotBlank) ?: it.login
+                        )
+                    },
                     maxRadiusMeters = maxRadius
                 )
                 applyDerivedMarkers()
@@ -122,7 +126,11 @@ class MapViewModel @Inject constructor(
                 selectedZoneId = null,
                 maxRadiusMeters = prefs.maxRadius.first(),
                 friends = friendsRepository.listFriends().map {
-                    FriendOptionUi(it.id, it.tag, it.displayName)
+                    FriendOptionUi(
+                        id = it.id,
+                        tag = it.login,
+                        displayName = it.displayName?.takeIf(String::isNotBlank) ?: it.login
+                    )
                 }
             )
         }
@@ -138,7 +146,11 @@ class MapViewModel @Inject constructor(
                 selectedZoneId = zoneId,
                 maxRadiusMeters = prefs.maxRadius.first(),
                 friends = friendsRepository.listFriends().map {
-                    FriendOptionUi(it.id, it.tag, it.displayName)
+                    FriendOptionUi(
+                        id = it.id,
+                        tag = it.login,
+                        displayName = it.displayName?.takeIf(String::isNotBlank) ?: it.login
+                    )
                 }
             )
         }
@@ -256,55 +268,32 @@ class MapViewModel @Inject constructor(
 
     private fun observeBindings() {
         viewModelScope.launch {
-            combine(
+            kotlinx.coroutines.flow.combine(
                 locationRepository.currentDeviceLocation,
-                friendsRepository.observeFriends(),
                 prefs.onlyOwnMarkers
-            ) { deviceLocation, friends, onlyOwnMarkers ->
-                Triple(deviceLocation, friends, onlyOwnMarkers)
-            }.collect { (deviceLocation, friends, onlyOwnMarkers) ->
+            ) { deviceLocation, onlyOwnMarkers ->
+                deviceLocation to onlyOwnMarkers
+            }.collect { (deviceLocation, onlyOwnMarkers) ->
                 _state.value = _state.value.copy(
-                    friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
                     onlyOwnMarkers = onlyOwnMarkers
                 )
-                applyDerivedMarkers(deviceLocation, friends, onlyOwnMarkers)
+                applyDerivedMarkers(deviceLocation = deviceLocation)
             }
         }
     }
 
     private fun applyDerivedMarkers(
-        deviceLocation: LocalLocationDto? = null,
-        friends: List<LocalFriendDto> = emptyList(),
-        onlyOwnMarkers: Boolean = _state.value.onlyOwnMarkers
+        deviceLocation: LocalLocationDto? = null
     ) {
         val actualDeviceLocation = deviceLocation ?: _state.value.deviceLocation?.let {
             LocalLocationDto(it.latitude, it.longitude, it.accuracy, it.deviceTimeIso)
         }
-        val actualFriends = if (friends.isEmpty()) {
-            _state.value.friendMarkers.map {
-                LocalFriendDto(
-                    id = it.id,
-                    tag = it.tag,
-                    displayName = it.displayName,
-                    latitude = it.latitude,
-                    longitude = it.longitude,
-                    locationUpdatedAtIso = it.locationUpdatedAtIso
-                )
-            }
-        } else {
-            friends
-        }
 
         val deviceUi = actualDeviceLocation?.toUi(_state.value.zones)
-        val friendMarkers = if (onlyOwnMarkers) {
-            emptyList()
-        } else {
-            actualFriends.mapNotNull { it.toMapUi(_state.value.zones) }
-        }
 
         _state.value = _state.value.copy(
             deviceLocation = deviceUi,
-            friendMarkers = friendMarkers
+            friendMarkers = emptyList()
         )
 
         if (deviceUi != null && !initialDeviceFocusApplied && _state.value.focusTarget == null) {
@@ -324,22 +313,6 @@ class MapViewModel @Inject constructor(
             accuracy = accuracy,
             deviceTimeIso = deviceTimeIso,
             zoneNames = zones.filter { it.containsPoint(latitude, longitude) }.map { it.name }
-        )
-    }
-
-    private fun LocalFriendDto.toMapUi(zones: List<ZoneUi>): FriendMapUi? {
-        val lat = latitude ?: return null
-        val lon = longitude ?: return null
-        return FriendMapUi(
-            id = id,
-            displayName = displayName,
-            tag = tag,
-            latitude = lat,
-            longitude = lon,
-            zoneNames = zones
-                .filter { zone -> zone.containsPoint(lat, lon) && (zone.detectorFriendIds.isEmpty() || zone.detectorFriendIds.contains(id)) }
-                .map { it.name },
-            locationUpdatedAtIso = locationUpdatedAtIso
         )
     }
 
@@ -365,7 +338,7 @@ class MapViewModel @Inject constructor(
             centerLon = centerLon,
             radiusMeters = radiusMeters,
             isActive = isActive,
-            detectorFriendIds = detectorFriendIds
+            detectorFriendIds = notifyFriendIds
         )
     }
 }

@@ -9,10 +9,10 @@ class EventRepository(
     private val api: FriendZoneApi,
     private val prefs: AppPreferences
 ) {
-    suspend fun getEvents(): List<EventDto> {
-        val clientId = prefs.clientId.first() ?: error("clientId is missing. Registration not completed.")
-        return api.getEvents(clientId)
+    suspend fun getEvents(after: String? = null): List<EventDto> {
+        if (prefs.accessToken.first().isNullOrBlank()) return emptyList()
+        return runCatching { api.getEvents(after) }
+            .getOrElse { throw it.toReadableException() }
     }
 }
-
 

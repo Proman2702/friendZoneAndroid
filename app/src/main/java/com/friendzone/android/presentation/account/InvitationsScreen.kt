@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,7 +52,7 @@ fun InvitationsScreen(
     viewModel: InvitationsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var tag by remember { mutableStateOf("") }
+    var login by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -73,7 +74,7 @@ fun InvitationsScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад",
+                        contentDescription = "Back",
                         tint = InvitationsText
                     )
                 }
@@ -88,20 +89,20 @@ fun InvitationsScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "Приглашения",
+                        text = "Invitations",
                         color = InvitationsText,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
                     OutlinedTextField(
-                        value = tag,
-                        onValueChange = { tag = it },
+                        value = login,
+                        onValueChange = { login = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp),
                         singleLine = true,
-                        label = { Text("Тег пользователя") },
-                        placeholder = { Text("@friend_tag") },
+                        label = { Text("User login") },
+                        placeholder = { Text("friend_login") },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
@@ -116,8 +117,8 @@ fun InvitationsScreen(
                     )
                     Button(
                         onClick = {
-                            viewModel.sendInvitation(tag)
-                            tag = ""
+                            viewModel.sendInvitation(login)
+                            login = ""
                         },
                         modifier = Modifier.padding(top = 12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -126,7 +127,7 @@ fun InvitationsScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Пригласить", fontWeight = FontWeight.Bold)
+                        Text("Send", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -137,29 +138,26 @@ fun InvitationsScreen(
                     .padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    SectionTitle("Отправленные приглашения")
-                }
+                item { SectionTitle("Outgoing") }
                 if (state.invited.isEmpty()) {
-                    item {
-                        EmptyInvitationCard("Пока никого не приглашали")
-                    }
+                    item { EmptyInvitationCard("No outgoing invitations") }
                 } else {
-                    items(state.invited) { invitation ->
-                        InvitationCard(invitation)
+                    items(state.invited, key = { it.id }) { invitation ->
+                        InvitationCard(invitation = invitation, showActions = false)
                     }
                 }
 
-                item {
-                    SectionTitle("Входящие приглашения")
-                }
+                item { SectionTitle("Incoming") }
                 if (state.incoming.isEmpty()) {
-                    item {
-                        EmptyInvitationCard("Пока нет входящих приглашений")
-                    }
+                    item { EmptyInvitationCard("No incoming invitations") }
                 } else {
-                    items(state.incoming) { invitation ->
-                        InvitationCard(invitation)
+                    items(state.incoming, key = { it.id }) { invitation ->
+                        InvitationCard(
+                            invitation = invitation,
+                            showActions = true,
+                            onAccept = { viewModel.acceptInvitation(invitation.id) },
+                            onDecline = { viewModel.declineInvitation(invitation.id) }
+                        )
                     }
                 }
             }
@@ -195,7 +193,12 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun InvitationCard(invitation: InvitationUi) {
+private fun InvitationCard(
+    invitation: InvitationUi,
+    showActions: Boolean,
+    onAccept: (() -> Unit)? = null,
+    onDecline: (() -> Unit)? = null
+) {
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = InvitationsCard)
@@ -208,11 +211,30 @@ private fun InvitationCard(invitation: InvitationUi) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = invitation.tag,
+                text = invitation.login,
                 color = InvitationsAccent,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 4.dp)
             )
+            Text(
+                text = invitation.status,
+                color = InvitationsText,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            if (showActions) {
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(onClick = { onAccept?.invoke() }) {
+                        Text("Accept", color = InvitationsAccent, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = { onDecline?.invoke() }) {
+                        Text("Decline", color = InvitationsText)
+                    }
+                }
+            }
         }
     }
 }

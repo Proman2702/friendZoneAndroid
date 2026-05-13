@@ -1,0 +1,1786 @@
+Index: app/src/main/java/com/friendzone/android/core/notifications/AlarmReceiver.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.notifications\r\n\r\nimport android.content.BroadcastReceiver\r\nimport android.content.Context\r\nimport android.content.Intent\r\n\r\nclass AlarmReceiver : BroadcastReceiver() {\r\n    override fun onReceive(context: Context, intent: Intent) {\r\n        val notifier = Notifier(context)\r\n        val title = intent.getStringExtra(\"title\") ?: \"FriendZone\"\r\n        val body = intent.getStringExtra(\"body\") ?: \"Zone event\"\r\n        notifier.showEventNotification(title, body)\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/notifications/AlarmReceiver.kt b/app/src/main/java/com/friendzone/android/core/notifications/AlarmReceiver.kt
+--- a/app/src/main/java/com/friendzone/android/core/notifications/AlarmReceiver.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/notifications/AlarmReceiver.kt	(date 1778616473455)
+@@ -8,7 +8,7 @@
+     override fun onReceive(context: Context, intent: Intent) {
+         val notifier = Notifier(context)
+         val title = intent.getStringExtra("title") ?: "FriendZone"
+-        val body = intent.getStringExtra("body") ?: "Zone event"
++        val body = intent.getStringExtra("body") ?: "Событие зоны"
+         notifier.showEventNotification(title, body)
+     }
+ }
+Index: app/src/main/java/com/friendzone/android/core/notifications/Notifier.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.notifications\r\n\r\nimport android.app.NotificationChannel\r\nimport android.app.NotificationManager\r\nimport android.media.AudioAttributes\r\nimport android.media.RingtoneManager\r\nimport android.content.Context\r\nimport androidx.core.app.NotificationCompat\r\nimport com.friendzone.android.R\r\n\r\nclass Notifier(private val context: Context) {\r\n    private val manager = context.getSystemService(NotificationManager::class.java)\r\n\r\n    fun showEventNotification(title: String, body: String) {\r\n        ensureChannel()\r\n        val notification = NotificationCompat.Builder(context, CHANNEL_ID)\r\n            .setSmallIcon(R.drawable.ic_notification)\r\n            .setContentTitle(title)\r\n            .setContentText(body)\r\n            .setPriority(NotificationCompat.PRIORITY_HIGH)\r\n            .setDefaults(NotificationCompat.DEFAULT_VIBRATE)\r\n            .setAutoCancel(true)\r\n            .build()\r\n        manager.notify(System.currentTimeMillis().toInt(), notification)\r\n    }\r\n\r\n    private fun ensureChannel() {\r\n        val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)\r\n            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)\r\n        val attributes = AudioAttributes.Builder()\r\n            .setUsage(AudioAttributes.USAGE_ALARM)\r\n            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)\r\n            .build()\r\n\r\n        val channel = NotificationChannel(\r\n            CHANNEL_ID,\r\n            \"Zone events\",\r\n            NotificationManager.IMPORTANCE_HIGH\r\n        )\r\n        channel.setSound(alarmSound, attributes)\r\n        channel.enableVibration(true)\r\n        channel.vibrationPattern = longArrayOf(0, 300, 200, 300)\r\n        manager.createNotificationChannel(channel)\r\n    }\r\n\r\n    companion object {\r\n        private const val CHANNEL_ID = \"friendzone_events\"\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/notifications/Notifier.kt b/app/src/main/java/com/friendzone/android/core/notifications/Notifier.kt
+--- a/app/src/main/java/com/friendzone/android/core/notifications/Notifier.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/notifications/Notifier.kt	(date 1778616473455)
+@@ -34,7 +34,7 @@
+ 
+         val channel = NotificationChannel(
+             CHANNEL_ID,
+-            "Zone events",
++            "События зон",
+             NotificationManager.IMPORTANCE_HIGH
+         )
+         channel.setSound(alarmSound, attributes)
+Index: app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.bootstrap\r\n\r\nimport android.app.Application\r\nimport androidx.lifecycle.AndroidViewModel\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.friendzone.android.core.location.LocationUploader\r\nimport com.friendzone.android.data.repository.ClientRepository\r\nimport dagger.hilt.android.lifecycle.HiltViewModel\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.StateFlow\r\nimport kotlinx.coroutines.launch\r\nimport javax.inject.Inject\r\n\r\ndata class BootstrapState(\r\n    val errorMessage: String? = null\r\n)\r\n\r\n@HiltViewModel\r\nclass BootstrapViewModel @Inject constructor(\r\n    private val app: Application,\r\n    private val clientRepository: ClientRepository,\r\n    private val locationUploader: LocationUploader\r\n) : AndroidViewModel(app) {\r\n    private val _state = MutableStateFlow(BootstrapState())\r\n    val state: StateFlow<BootstrapState> = _state\r\n\r\n    fun ensureRegistered() {\r\n        viewModelScope.launch {\r\n            val result = clientRepository.ensureRegistered()\r\n            result.onFailure { error ->\r\n                _state.value = BootstrapState(\r\n                    errorMessage = error.message ?: \"Failed to reach backend\"\r\n                )\r\n            }\r\n            if (result.isSuccess) {\r\n                _state.value = BootstrapState()\r\n                locationUploader.start(viewModelScope)\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt b/app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt	(date 1778616473449)
+@@ -4,10 +4,12 @@
+ import androidx.lifecycle.AndroidViewModel
+ import androidx.lifecycle.viewModelScope
+ import com.friendzone.android.core.location.LocationUploader
++import com.friendzone.android.data.local.AppPreferences
+ import com.friendzone.android.data.repository.ClientRepository
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.launch
+ import javax.inject.Inject
+ 
+@@ -19,6 +21,7 @@
+ class BootstrapViewModel @Inject constructor(
+     private val app: Application,
+     private val clientRepository: ClientRepository,
++    private val prefs: AppPreferences,
+     private val locationUploader: LocationUploader
+ ) : AndroidViewModel(app) {
+     private val _state = MutableStateFlow(BootstrapState())
+@@ -29,12 +32,13 @@
+             val result = clientRepository.ensureRegistered()
+             result.onFailure { error ->
+                 _state.value = BootstrapState(
+-                    errorMessage = error.message ?: "Failed to reach backend"
++                    errorMessage = error.message ?: "Не удалось подключиться к серверу"
+                 )
+             }
+             if (result.isSuccess) {
+                 _state.value = BootstrapState()
+-                locationUploader.start(viewModelScope)
++                val intervalMillis = (prefs.locationUpdateIntervalMinutes.first().coerceAtLeast(0.1) * 60_000L).toLong()
++                locationUploader.start(viewModelScope, intervalMillis)
+             }
+         }
+     }
+Index: app/src/main/java/com/friendzone/android/presentation/permissions/PermissionsGate.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.permissions\r\n\r\nimport android.Manifest\r\nimport androidx.activity.compose.rememberLauncherForActivityResult\r\nimport androidx.activity.result.contract.ActivityResultContracts\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.LaunchedEffect\r\nimport androidx.compose.runtime.remember\r\n\r\n@Composable\r\nfun PermissionsGate(onReady: () -> Unit) {\r\n    val permissions = remember {\r\n        arrayOf(\r\n            Manifest.permission.ACCESS_FINE_LOCATION,\r\n            Manifest.permission.ACCESS_COARSE_LOCATION,\r\n            Manifest.permission.POST_NOTIFICATIONS\r\n        )\r\n    }\r\n\r\n    val launcher = rememberLauncherForActivityResult(\r\n        ActivityResultContracts.RequestMultiplePermissions()\r\n    ) {\r\n        onReady()\r\n    }\r\n\r\n    LaunchedEffect(Unit) {\r\n        launcher.launch(permissions)\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/permissions/PermissionsGate.kt b/app/src/main/java/com/friendzone/android/presentation/permissions/PermissionsGate.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/permissions/PermissionsGate.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/permissions/PermissionsGate.kt	(date 1778615617290)
+@@ -1,29 +1,53 @@
+ package com.friendzone.android.presentation.permissions
+ 
+ import android.Manifest
++import android.content.pm.PackageManager
++import android.os.Build
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.result.contract.ActivityResultContracts
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.remember
++import androidx.compose.ui.platform.LocalContext
++import androidx.core.content.ContextCompat
+ 
+ @Composable
+ fun PermissionsGate(onReady: () -> Unit) {
++    val context = LocalContext.current
+     val permissions = remember {
+-        arrayOf(
+-            Manifest.permission.ACCESS_FINE_LOCATION,
+-            Manifest.permission.ACCESS_COARSE_LOCATION,
+-            Manifest.permission.POST_NOTIFICATIONS
+-        )
++        buildList {
++            add(Manifest.permission.ACCESS_FINE_LOCATION)
++            add(Manifest.permission.ACCESS_COARSE_LOCATION)
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
++                add(Manifest.permission.POST_NOTIFICATIONS)
++            }
++        }.toTypedArray()
+     }
+ 
+     val launcher = rememberLauncherForActivityResult(
+         ActivityResultContracts.RequestMultiplePermissions()
+-    ) {
+-        onReady()
++    ) { grantResults ->
++        val hasLocation = grantResults[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
++            grantResults[Manifest.permission.ACCESS_COARSE_LOCATION] == true
++        if (hasLocation) {
++            onReady()
++        }
+     }
+ 
+     LaunchedEffect(Unit) {
++        val hasLocation = ContextCompat.checkSelfPermission(
++            context,
++            Manifest.permission.ACCESS_FINE_LOCATION
++        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
++            context,
++            Manifest.permission.ACCESS_COARSE_LOCATION
++        ) == PackageManager.PERMISSION_GRANTED
++
++        if (hasLocation) {
++            onReady()
++            return@LaunchedEffect
++        }
++
+         launcher.launch(permissions)
+     }
+ }
+Index: app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.data.repository\r\n\r\nimport com.friendzone.android.data.local.AppPreferences\r\nimport com.friendzone.android.data.remote.FriendZoneApi\r\nimport com.friendzone.android.data.remote.dto.EventDto\r\nimport com.friendzone.android.data.remote.dto.LocationBatchRequest\r\nimport com.friendzone.android.data.remote.dto.LocationSampleDto\r\nimport kotlinx.coroutines.flow.first\r\n\r\nclass LocationRepository(\r\n    private val api: FriendZoneApi,\r\n    private val prefs: AppPreferences\r\n) {\r\n    suspend fun sendBatch(samples: List<LocationSampleDto>): List<EventDto> {\r\n        val clientId = prefs.clientId.first() ?: error(\"clientId is missing. Registration not completed.\")\r\n        val response = api.sendLocations(LocationBatchRequest(clientId, samples))\r\n        return response.events\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt b/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt
+--- a/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt	(date 1778610327886)
+@@ -1,21 +1,36 @@
+ package com.friendzone.android.data.repository
+ 
+ import com.friendzone.android.data.local.AppPreferences
++import com.friendzone.android.data.local.LocalLocationDto
+ import com.friendzone.android.data.remote.FriendZoneApi
+ import com.friendzone.android.data.remote.dto.EventDto
+ import com.friendzone.android.data.remote.dto.LocationBatchRequest
+ import com.friendzone.android.data.remote.dto.LocationSampleDto
++import kotlinx.coroutines.flow.Flow
+ import kotlinx.coroutines.flow.first
+ 
+ class LocationRepository(
+     private val api: FriendZoneApi,
+     private val prefs: AppPreferences
+ ) {
++    val currentDeviceLocation: Flow<LocalLocationDto?> = prefs.currentDeviceLocation
++
++    suspend fun saveDeviceLocation(sample: LocationSampleDto) {
++        prefs.saveCurrentDeviceLocation(
++            LocalLocationDto(
++                latitude = sample.lat,
++                longitude = sample.lon,
++                accuracy = sample.accuracy,
++                deviceTimeIso = sample.deviceTime
++            )
++        )
++    }
++
+     suspend fun sendBatch(samples: List<LocationSampleDto>): List<EventDto> {
++        samples.lastOrNull()?.let { saveDeviceLocation(it) }
+         val clientId = prefs.clientId.first() ?: error("clientId is missing. Registration not completed.")
+         val response = api.sendLocations(LocationBatchRequest(clientId, samples))
+         return response.events
+     }
+ }
+ 
+-
+Index: app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.data.local\r\n\r\nimport android.content.Context\r\nimport androidx.datastore.preferences.core.booleanPreferencesKey\r\nimport androidx.datastore.preferences.core.edit\r\nimport androidx.datastore.preferences.core.intPreferencesKey\r\nimport androidx.datastore.preferences.core.stringPreferencesKey\r\nimport androidx.datastore.preferences.preferencesDataStore\r\nimport com.friendzone.android.BuildConfig\r\nimport com.friendzone.android.data.remote.dto.ZoneDto\r\nimport kotlinx.coroutines.flow.Flow\r\nimport kotlinx.coroutines.flow.first\r\nimport kotlinx.coroutines.flow.map\r\nimport org.json.JSONArray\r\nimport org.json.JSONObject\r\n\r\nprivate val Context.dataStore by preferencesDataStore(name = \"friendzone_prefs\")\r\n\r\nclass AppPreferences(private val context: Context) {\r\n    private val installIdKey = stringPreferencesKey(\"install_id\")\r\n    private val clientIdKey = stringPreferencesKey(\"client_id\")\r\n    private val apiBaseUrlKey = stringPreferencesKey(\"api_base_url\")\r\n    private val userNameKey = stringPreferencesKey(\"user_name\")\r\n    private val userEmailKey = stringPreferencesKey(\"user_email\")\r\n    private val isLoggedInKey = booleanPreferencesKey(\"is_logged_in\")\r\n    private val localZonesKey = stringPreferencesKey(\"local_zones_json\")\r\n    private val localFriendsKey = stringPreferencesKey(\"local_friends_json\")\r\n    private val localInvitationsKey = stringPreferencesKey(\"local_invitations_json\")\r\n    private val maxMarkersKey = intPreferencesKey(\"max_markers\")\r\n    private val maxRadiusKey = intPreferencesKey(\"max_radius\")\r\n    private val onlyOwnMarkersKey = booleanPreferencesKey(\"only_own_markers\")\r\n    private val notifyAboutFriendKey = booleanPreferencesKey(\"notify_about_friend\")\r\n\r\n    val installId: Flow<String?> = context.dataStore.data.map { it[installIdKey] }\r\n    val clientId: Flow<String?> = context.dataStore.data.map { it[clientIdKey] }\r\n    val apiBaseUrl: Flow<String> = context.dataStore.data.map { it[apiBaseUrlKey] ?: BuildConfig.API_BASE_URL }\r\n    val userName: Flow<String?> = context.dataStore.data.map { it[userNameKey] }\r\n    val userEmail: Flow<String?> = context.dataStore.data.map { it[userEmailKey] }\r\n    val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[isLoggedInKey] ?: false }\r\n    val maxMarkers: Flow<Int> = context.dataStore.data.map { it[maxMarkersKey] ?: 20 }\r\n    val maxRadius: Flow<Int> = context.dataStore.data.map { it[maxRadiusKey] ?: 2000 }\r\n    val onlyOwnMarkers: Flow<Boolean> = context.dataStore.data.map { it[onlyOwnMarkersKey] ?: true }\r\n    val notifyAboutFriend: Flow<Boolean> = context.dataStore.data.map { it[notifyAboutFriendKey] ?: true }\r\n\r\n    suspend fun setInstallId(value: String) {\r\n        context.dataStore.edit { it[installIdKey] = value }\r\n    }\r\n\r\n    suspend fun setClientId(value: String) {\r\n        context.dataStore.edit { it[clientIdKey] = value }\r\n    }\r\n\r\n    suspend fun setApiBaseUrl(value: String) {\r\n        context.dataStore.edit { it[apiBaseUrlKey] = value }\r\n    }\r\n\r\n    suspend fun saveUser(name: String, email: String) {\r\n        context.dataStore.edit {\r\n            it[userNameKey] = name\r\n            it[userEmailKey] = email\r\n        }\r\n    }\r\n\r\n    suspend fun setLoggedIn(value: Boolean) {\r\n        context.dataStore.edit { it[isLoggedInKey] = value }\r\n    }\r\n\r\n    suspend fun saveMapSettings(\r\n        maxMarkers: Int,\r\n        maxRadius: Int,\r\n        onlyOwnMarkers: Boolean,\r\n        notifyAboutFriend: Boolean\r\n    ) {\r\n        context.dataStore.edit {\r\n            it[maxMarkersKey] = maxMarkers\r\n            it[maxRadiusKey] = maxRadius\r\n            it[onlyOwnMarkersKey] = onlyOwnMarkers\r\n            it[notifyAboutFriendKey] = notifyAboutFriend\r\n        }\r\n    }\r\n\r\n    suspend fun getLocalZones(): List<ZoneDto> {\r\n        val raw = context.dataStore.data.map { it[localZonesKey] ?: \"[]\" }.first()\r\n        return parseZones(raw)\r\n    }\r\n\r\n    suspend fun saveLocalZones(zones: List<ZoneDto>) {\r\n        context.dataStore.edit {\r\n            it[localZonesKey] = JSONArray().apply {\r\n                zones.forEach { zone ->\r\n                    put(\r\n                        JSONObject().apply {\r\n                            put(\"id\", zone.id)\r\n                            put(\"name\", zone.name)\r\n                            put(\"centerLat\", zone.centerLat)\r\n                            put(\"centerLon\", zone.centerLon)\r\n                            put(\"radiusMeters\", zone.radiusMeters)\r\n                            put(\"isActive\", zone.isActive)\r\n                            put(\"detectorFriendIds\", JSONArray(zone.detectorFriendIds))\r\n                        }\r\n                    )\r\n                }\r\n            }.toString()\r\n        }\r\n    }\r\n\r\n    suspend fun getLocalFriends(): List<LocalFriendDto> {\r\n        val raw = context.dataStore.data.map { it[localFriendsKey] ?: \"[]\" }.first()\r\n        return parseFriends(raw)\r\n    }\r\n\r\n    suspend fun saveLocalFriends(friends: List<LocalFriendDto>) {\r\n        context.dataStore.edit {\r\n            it[localFriendsKey] = JSONArray().apply {\r\n                friends.forEach { friend ->\r\n                    put(\r\n                        JSONObject().apply {\r\n                            put(\"id\", friend.id)\r\n                            put(\"tag\", friend.tag)\r\n                            put(\"displayName\", friend.displayName)\r\n                        }\r\n                    )\r\n                }\r\n            }.toString()\r\n        }\r\n    }\r\n\r\n    suspend fun getLocalInvitations(): List<LocalInvitationDto> {\r\n        val raw = context.dataStore.data.map { it[localInvitationsKey] ?: \"[]\" }.first()\r\n        return parseInvitations(raw)\r\n    }\r\n\r\n    suspend fun saveLocalInvitations(invitations: List<LocalInvitationDto>) {\r\n        context.dataStore.edit {\r\n            it[localInvitationsKey] = JSONArray().apply {\r\n                invitations.forEach { invitation ->\r\n                    put(\r\n                        JSONObject().apply {\r\n                            put(\"id\", invitation.id)\r\n                            put(\"tag\", invitation.tag)\r\n                            put(\"displayName\", invitation.displayName)\r\n                            put(\"isIncoming\", invitation.isIncoming)\r\n                        }\r\n                    )\r\n                }\r\n            }.toString()\r\n        }\r\n    }\r\n\r\n    private fun parseZones(raw: String): List<ZoneDto> {\r\n        return runCatching {\r\n            val jsonArray = JSONArray(raw)\r\n            buildList {\r\n                for (index in 0 until jsonArray.length()) {\r\n                    val item = jsonArray.optJSONObject(index) ?: continue\r\n                    add(\r\n                        ZoneDto(\r\n                            id = item.optString(\"id\"),\r\n                            name = item.optString(\"name\"),\r\n                            centerLat = item.optDouble(\"centerLat\"),\r\n                            centerLon = item.optDouble(\"centerLon\"),\r\n                            radiusMeters = item.optDouble(\"radiusMeters\"),\r\n                            isActive = item.optBoolean(\"isActive\"),\r\n                            detectorFriendIds = item.optJSONArray(\"detectorFriendIds\")\r\n                                ?.let { ids ->\r\n                                    buildList {\r\n                                        for (idIndex in 0 until ids.length()) {\r\n                                            add(ids.optString(idIndex))\r\n                                        }\r\n                                    }\r\n                                }\r\n                                ?: emptyList()\r\n                        )\r\n                    )\r\n                }\r\n            }\r\n        }.getOrDefault(emptyList())\r\n    }\r\n\r\n    private fun parseFriends(raw: String): List<LocalFriendDto> {\r\n        return runCatching {\r\n            val jsonArray = JSONArray(raw)\r\n            buildList {\r\n                for (index in 0 until jsonArray.length()) {\r\n                    val item = jsonArray.optJSONObject(index) ?: continue\r\n                    add(\r\n                        LocalFriendDto(\r\n                            id = item.optString(\"id\"),\r\n                            tag = item.optString(\"tag\"),\r\n                            displayName = item.optString(\"displayName\")\r\n                        )\r\n                    )\r\n                }\r\n            }\r\n        }.getOrDefault(emptyList())\r\n    }\r\n\r\n    private fun parseInvitations(raw: String): List<LocalInvitationDto> {\r\n        return runCatching {\r\n            val jsonArray = JSONArray(raw)\r\n            buildList {\r\n                for (index in 0 until jsonArray.length()) {\r\n                    val item = jsonArray.optJSONObject(index) ?: continue\r\n                    add(\r\n                        LocalInvitationDto(\r\n                            id = item.optString(\"id\"),\r\n                            tag = item.optString(\"tag\"),\r\n                            displayName = item.optString(\"displayName\"),\r\n                            isIncoming = item.optBoolean(\"isIncoming\")\r\n                        )\r\n                    )\r\n                }\r\n            }\r\n        }.getOrDefault(emptyList())\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt b/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt
+--- a/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt	(date 1778616611058)
+@@ -26,8 +26,11 @@
+     private val localZonesKey = stringPreferencesKey("local_zones_json")
+     private val localFriendsKey = stringPreferencesKey("local_friends_json")
+     private val localInvitationsKey = stringPreferencesKey("local_invitations_json")
++    private val currentDeviceLocationKey = stringPreferencesKey("current_device_location_json")
+     private val maxMarkersKey = intPreferencesKey("max_markers")
+     private val maxRadiusKey = intPreferencesKey("max_radius")
++    private val legacyLocationUpdateIntervalMinutesKey = intPreferencesKey("location_update_interval_minutes")
++    private val locationUpdateIntervalMinutesKey = stringPreferencesKey("location_update_interval_minutes_decimal")
+     private val onlyOwnMarkersKey = booleanPreferencesKey("only_own_markers")
+     private val notifyAboutFriendKey = booleanPreferencesKey("notify_about_friend")
+ 
+@@ -37,8 +40,18 @@
+     val userName: Flow<String?> = context.dataStore.data.map { it[userNameKey] }
+     val userEmail: Flow<String?> = context.dataStore.data.map { it[userEmailKey] }
+     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[isLoggedInKey] ?: false }
++    val currentDeviceLocation: Flow<LocalLocationDto?> =
++        context.dataStore.data.map { parseDeviceLocation(it[currentDeviceLocationKey]) }
++    val localFriends: Flow<List<LocalFriendDto>> =
++        context.dataStore.data.map { parseFriends(it[localFriendsKey] ?: "[]") }
+     val maxMarkers: Flow<Int> = context.dataStore.data.map { it[maxMarkersKey] ?: 20 }
+     val maxRadius: Flow<Int> = context.dataStore.data.map { it[maxRadiusKey] ?: 2000 }
++    val locationUpdateIntervalMinutes: Flow<Double> =
++        context.dataStore.data.map { prefs ->
++            prefs[locationUpdateIntervalMinutesKey]?.toDoubleOrNull()
++                ?: prefs[legacyLocationUpdateIntervalMinutesKey]?.toDouble()
++                ?: 1.0
++        }
+     val onlyOwnMarkers: Flow<Boolean> = context.dataStore.data.map { it[onlyOwnMarkersKey] ?: true }
+     val notifyAboutFriend: Flow<Boolean> = context.dataStore.data.map { it[notifyAboutFriendKey] ?: true }
+ 
+@@ -68,17 +81,31 @@
+     suspend fun saveMapSettings(
+         maxMarkers: Int,
+         maxRadius: Int,
++        locationUpdateIntervalMinutes: Double,
+         onlyOwnMarkers: Boolean,
+         notifyAboutFriend: Boolean
+     ) {
+         context.dataStore.edit {
+             it[maxMarkersKey] = maxMarkers
+             it[maxRadiusKey] = maxRadius
++            it[locationUpdateIntervalMinutesKey] = locationUpdateIntervalMinutes.toString()
++            it.remove(legacyLocationUpdateIntervalMinutesKey)
+             it[onlyOwnMarkersKey] = onlyOwnMarkers
+             it[notifyAboutFriendKey] = notifyAboutFriend
+         }
+     }
+ 
++    suspend fun saveCurrentDeviceLocation(location: LocalLocationDto) {
++        context.dataStore.edit {
++            it[currentDeviceLocationKey] = JSONObject().apply {
++                put("latitude", location.latitude)
++                put("longitude", location.longitude)
++                put("accuracy", location.accuracy)
++                put("deviceTimeIso", location.deviceTimeIso)
++            }.toString()
++        }
++    }
++
+     suspend fun getLocalZones(): List<ZoneDto> {
+         val raw = context.dataStore.data.map { it[localZonesKey] ?: "[]" }.first()
+         return parseZones(raw)
+@@ -118,6 +145,10 @@
+                             put("id", friend.id)
+                             put("tag", friend.tag)
+                             put("displayName", friend.displayName)
++                            put("latitude", friend.latitude)
++                            put("longitude", friend.longitude)
++                            put("accuracy", friend.accuracy)
++                            put("locationUpdatedAtIso", friend.locationUpdatedAtIso)
+                         }
+                     )
+                 }
+@@ -187,7 +218,12 @@
+                         LocalFriendDto(
+                             id = item.optString("id"),
+                             tag = item.optString("tag"),
+-                            displayName = item.optString("displayName")
++                            displayName = item.optString("displayName"),
++                            latitude = item.optNullableDouble("latitude"),
++                            longitude = item.optNullableDouble("longitude"),
++                            accuracy = item.optNullableDouble("accuracy"),
++                            locationUpdatedAtIso = item.optString("locationUpdatedAtIso")
++                                .takeIf { value -> value.isNotBlank() && value != "null" }
+                         )
+                     )
+                 }
+@@ -195,6 +231,19 @@
+         }.getOrDefault(emptyList())
+     }
+ 
++    private fun parseDeviceLocation(raw: String?): LocalLocationDto? {
++        if (raw.isNullOrBlank()) return null
++        return runCatching {
++            val json = JSONObject(raw)
++            LocalLocationDto(
++                latitude = json.getDouble("latitude"),
++                longitude = json.getDouble("longitude"),
++                accuracy = json.optDouble("accuracy", 0.0),
++                deviceTimeIso = json.optString("deviceTimeIso")
++            )
++        }.getOrNull()
++    }
++
+     private fun parseInvitations(raw: String): List<LocalInvitationDto> {
+         return runCatching {
+             val jsonArray = JSONArray(raw)
+@@ -213,4 +262,8 @@
+             }
+         }.getOrDefault(emptyList())
+     }
++
++    private fun JSONObject.optNullableDouble(key: String): Double? {
++        return if (isNull(key) || !has(key)) null else optDouble(key)
++    }
+ }
+Index: app/src/main/java/com/friendzone/android/core/location/OsmdroidLocationProvider.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.location\r\n\r\nimport android.annotation.SuppressLint\r\nimport android.content.Context\r\nimport android.location.Location\r\nimport android.location.LocationManager\r\nimport android.os.Looper\r\nimport kotlinx.coroutines.channels.awaitClose\r\nimport kotlinx.coroutines.flow.Flow\r\nimport kotlinx.coroutines.flow.callbackFlow\r\nimport java.time.Instant\r\n\r\nclass OsmdroidLocationProvider(private val context: Context) : LocationProvider {\r\n    @SuppressLint(\"MissingPermission\")\r\n    override fun locationUpdates(): Flow<LocationSample> = callbackFlow {\r\n        val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager\r\n\r\n        val listener = android.location.LocationListener { location: Location ->\r\n            trySend(location.toSample())\r\n        }\r\n\r\n        val looper = Looper.getMainLooper()\r\n        manager.requestLocationUpdates(\r\n            LocationManager.GPS_PROVIDER,\r\n            5_000L,\r\n            5f,\r\n            listener,\r\n            looper\r\n        )\r\n        manager.requestLocationUpdates(\r\n            LocationManager.NETWORK_PROVIDER,\r\n            10_000L,\r\n            10f,\r\n            listener,\r\n            looper\r\n        )\r\n\r\n        awaitClose {\r\n            manager.removeUpdates(listener)\r\n        }\r\n    }\r\n\r\n    private fun Location.toSample(): LocationSample =\r\n        LocationSample(\r\n            lat = latitude,\r\n            lon = longitude,\r\n            accuracy = accuracy.toDouble(),\r\n            deviceTimeIso = Instant.ofEpochMilli(time).toString()\r\n        )\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/location/OsmdroidLocationProvider.kt b/app/src/main/java/com/friendzone/android/core/location/OsmdroidLocationProvider.kt
+--- a/app/src/main/java/com/friendzone/android/core/location/OsmdroidLocationProvider.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/location/OsmdroidLocationProvider.kt	(date 1778615617290)
+@@ -1,10 +1,12 @@
+ package com.friendzone.android.core.location
+ 
+ import android.annotation.SuppressLint
++import android.content.pm.PackageManager
+ import android.content.Context
+ import android.location.Location
+ import android.location.LocationManager
+ import android.os.Looper
++import androidx.core.content.ContextCompat
+ import kotlinx.coroutines.channels.awaitClose
+ import kotlinx.coroutines.flow.Flow
+ import kotlinx.coroutines.flow.callbackFlow
+@@ -12,28 +14,61 @@
+ 
+ class OsmdroidLocationProvider(private val context: Context) : LocationProvider {
+     @SuppressLint("MissingPermission")
+-    override fun locationUpdates(): Flow<LocationSample> = callbackFlow {
++    override fun locationUpdates(intervalMillis: Long): Flow<LocationSample> = callbackFlow {
+         val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
++        val normalizedInterval = intervalMillis.coerceAtLeast(5_000L)
++        val hasLocationPermission =
++            ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
++                ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
++
++        if (!hasLocationPermission) {
++            close(SecurityException("Location permission is not granted"))
++            return@callbackFlow
++        }
+ 
+         val listener = android.location.LocationListener { location: Location ->
+             trySend(location.toSample())
+         }
+ 
++        runCatching {
++            manager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { trySend(it.toSample()) }
++        }
++        runCatching {
++            manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let { trySend(it.toSample()) }
++        }
++
+         val looper = Looper.getMainLooper()
+-        manager.requestLocationUpdates(
+-            LocationManager.GPS_PROVIDER,
+-            5_000L,
+-            5f,
+-            listener,
+-            looper
+-        )
+-        manager.requestLocationUpdates(
+-            LocationManager.NETWORK_PROVIDER,
+-            10_000L,
+-            10f,
+-            listener,
+-            looper
+-        )
++        val subscribedProviders = mutableListOf<String>()
++
++        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
++            runCatching {
++                manager.requestLocationUpdates(
++                    LocationManager.GPS_PROVIDER,
++                    normalizedInterval,
++                    5f,
++                    listener,
++                    looper
++                )
++                subscribedProviders += LocationManager.GPS_PROVIDER
++            }
++        }
++        if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
++            runCatching {
++                manager.requestLocationUpdates(
++                    LocationManager.NETWORK_PROVIDER,
++                    normalizedInterval.coerceAtLeast(10_000L),
++                    10f,
++                    listener,
++                    looper
++                )
++                subscribedProviders += LocationManager.NETWORK_PROVIDER
++            }
++        }
++
++        if (subscribedProviders.isEmpty()) {
++            close(IllegalStateException("No enabled location providers"))
++            return@callbackFlow
++        }
+ 
+         awaitClose {
+             manager.removeUpdates(listener)
+Index: app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.account\r\n\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.foundation.layout.Arrangement\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.Row\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.fillMaxWidth\r\nimport androidx.compose.foundation.layout.navigationBarsPadding\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.layout.statusBarsPadding\r\nimport androidx.compose.foundation.lazy.LazyColumn\r\nimport androidx.compose.foundation.lazy.items\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.automirrored.filled.ArrowBack\r\nimport androidx.compose.material3.Button\r\nimport androidx.compose.material3.ButtonDefaults\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.CardDefaults\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.material3.IconButton\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.OutlinedTextField\r\nimport androidx.compose.material3.OutlinedTextFieldDefaults\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.LaunchedEffect\r\nimport androidx.compose.runtime.collectAsState\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.runtime.mutableStateOf\r\nimport androidx.compose.runtime.remember\r\nimport androidx.compose.runtime.setValue\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.text.font.FontWeight\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.hilt.navigation.compose.hiltViewModel\r\n\r\nprivate val InvitationsBackground = Color(0xFF120D33)\r\nprivate val InvitationsCard = Color(0xFFFAFAFC)\r\nprivate val InvitationsAccent = Color(0xFFE3874F)\r\nprivate val InvitationsText = Color(0xFF1C1840)\r\n\r\n@Composable\r\nfun InvitationsScreen(\r\n    onBack: () -> Unit,\r\n    viewModel: InvitationsViewModel = hiltViewModel()\r\n) {\r\n    val state by viewModel.state.collectAsState()\r\n    var tag by remember { mutableStateOf(\"\") }\r\n\r\n    LaunchedEffect(Unit) {\r\n        viewModel.load()\r\n    }\r\n\r\n    Box(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .background(InvitationsBackground)\r\n            .statusBarsPadding()\r\n            .navigationBarsPadding()\r\n            .padding(horizontal = 16.dp, vertical = 14.dp)\r\n    ) {\r\n        Column(modifier = Modifier.fillMaxSize()) {\r\n            Card(\r\n                shape = RoundedCornerShape(10.dp),\r\n                colors = CardDefaults.cardColors(containerColor = Color.White)\r\n            ) {\r\n                IconButton(onClick = onBack) {\r\n                    Icon(\r\n                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,\r\n                        contentDescription = \"Назад\",\r\n                        tint = InvitationsText\r\n                    )\r\n                }\r\n            }\r\n\r\n            Card(\r\n                modifier = Modifier\r\n                    .fillMaxWidth()\r\n                    .padding(top = 12.dp),\r\n                shape = RoundedCornerShape(14.dp),\r\n                colors = CardDefaults.cardColors(containerColor = InvitationsCard)\r\n            ) {\r\n                Column(modifier = Modifier.padding(14.dp)) {\r\n                    Text(\r\n                        text = \"Приглашения\",\r\n                        color = InvitationsText,\r\n                        style = MaterialTheme.typography.titleLarge,\r\n                        fontWeight = FontWeight.ExtraBold\r\n                    )\r\n                    OutlinedTextField(\r\n                        value = tag,\r\n                        onValueChange = { tag = it },\r\n                        modifier = Modifier\r\n                            .fillMaxWidth()\r\n                            .padding(top = 12.dp),\r\n                        singleLine = true,\r\n                        label = { Text(\"Тег пользователя\") },\r\n                        placeholder = { Text(\"@friend_tag\") },\r\n                        shape = RoundedCornerShape(12.dp),\r\n                        colors = OutlinedTextFieldDefaults.colors(\r\n                            focusedContainerColor = Color.White,\r\n                            unfocusedContainerColor = Color.White,\r\n                            focusedBorderColor = InvitationsAccent,\r\n                            unfocusedBorderColor = Color.Transparent,\r\n                            focusedTextColor = InvitationsText,\r\n                            unfocusedTextColor = InvitationsText,\r\n                            focusedLabelColor = InvitationsAccent,\r\n                            unfocusedLabelColor = InvitationsText\r\n                        )\r\n                    )\r\n                    Button(\r\n                        onClick = {\r\n                            viewModel.sendInvitation(tag)\r\n                            tag = \"\"\r\n                        },\r\n                        modifier = Modifier.padding(top = 12.dp),\r\n                        colors = ButtonDefaults.buttonColors(\r\n                            containerColor = InvitationsAccent,\r\n                            contentColor = Color.White\r\n                        ),\r\n                        shape = RoundedCornerShape(12.dp)\r\n                    ) {\r\n                        Text(\"Пригласить\", fontWeight = FontWeight.Bold)\r\n                    }\r\n                }\r\n            }\r\n\r\n            LazyColumn(\r\n                modifier = Modifier\r\n                    .fillMaxSize()\r\n                    .padding(top = 12.dp),\r\n                verticalArrangement = Arrangement.spacedBy(12.dp)\r\n            ) {\r\n                item {\r\n                    SectionTitle(\"Отправленные приглашения\")\r\n                }\r\n                if (state.invited.isEmpty()) {\r\n                    item {\r\n                        EmptyInvitationCard(\"Пока никого не приглашали\")\r\n                    }\r\n                } else {\r\n                    items(state.invited) { invitation ->\r\n                        InvitationCard(invitation)\r\n                    }\r\n                }\r\n\r\n                item {\r\n                    SectionTitle(\"Входящие приглашения\")\r\n                }\r\n                if (state.incoming.isEmpty()) {\r\n                    item {\r\n                        EmptyInvitationCard(\"Пока нет входящих приглашений\")\r\n                    }\r\n                } else {\r\n                    items(state.incoming) { invitation ->\r\n                        InvitationCard(invitation)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n\r\n        state.message?.let { message ->\r\n            Card(\r\n                modifier = Modifier\r\n                    .align(Alignment.BottomCenter)\r\n                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)\r\n                    .clickable { viewModel.clearMessage() },\r\n                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f))\r\n            ) {\r\n                Text(\r\n                    text = message,\r\n                    color = InvitationsText,\r\n                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun SectionTitle(title: String) {\r\n    Text(\r\n        text = title,\r\n        color = Color.White,\r\n        style = MaterialTheme.typography.titleMedium,\r\n        fontWeight = FontWeight.Bold,\r\n        modifier = Modifier.padding(top = 4.dp)\r\n    )\r\n}\r\n\r\n@Composable\r\nprivate fun InvitationCard(invitation: InvitationUi) {\r\n    Card(\r\n        shape = RoundedCornerShape(14.dp),\r\n        colors = CardDefaults.cardColors(containerColor = InvitationsCard)\r\n    ) {\r\n        Column(modifier = Modifier.padding(14.dp)) {\r\n            Text(\r\n                text = invitation.displayName,\r\n                color = InvitationsText,\r\n                style = MaterialTheme.typography.titleMedium,\r\n                fontWeight = FontWeight.Bold\r\n            )\r\n            Text(\r\n                text = invitation.tag,\r\n                color = InvitationsAccent,\r\n                style = MaterialTheme.typography.bodyMedium,\r\n                modifier = Modifier.padding(top = 4.dp)\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun EmptyInvitationCard(text: String) {\r\n    Card(\r\n        shape = RoundedCornerShape(14.dp),\r\n        colors = CardDefaults.cardColors(containerColor = InvitationsCard)\r\n    ) {\r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(horizontal = 14.dp, vertical = 16.dp),\r\n            verticalAlignment = Alignment.CenterVertically\r\n        ) {\r\n            Text(\r\n                text = text,\r\n                color = InvitationsText,\r\n                style = MaterialTheme.typography.bodyMedium\r\n            )\r\n        }\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt b/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt	(date 1778616473454)
+@@ -107,7 +107,7 @@
+                             focusedContainerColor = Color.White,
+                             unfocusedContainerColor = Color.White,
+                             focusedBorderColor = InvitationsAccent,
+-                            unfocusedBorderColor = Color.Transparent,
++                            unfocusedBorderColor = InvitationsAccent.copy(alpha = 0.7f),
+                             focusedTextColor = InvitationsText,
+                             unfocusedTextColor = InvitationsText,
+                             focusedLabelColor = InvitationsAccent,
+Index: app/src/main/java/com/friendzone/android/data/local/LocalLocationDto.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/data/local/LocalLocationDto.kt b/app/src/main/java/com/friendzone/android/data/local/LocalLocationDto.kt
+new file mode 100644
+--- /dev/null	(date 1778610125940)
++++ b/app/src/main/java/com/friendzone/android/data/local/LocalLocationDto.kt	(date 1778610125940)
+@@ -0,0 +1,8 @@
++package com.friendzone.android.data.local
++
++data class LocalLocationDto(
++    val latitude: Double,
++    val longitude: Double,
++    val accuracy: Double,
++    val deviceTimeIso: String
++)
+Index: app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.settings\r\n\r\nimport androidx.lifecycle.ViewModel\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.friendzone.android.data.local.AppPreferences\r\nimport dagger.hilt.android.lifecycle.HiltViewModel\r\nimport javax.inject.Inject\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.StateFlow\r\nimport kotlinx.coroutines.flow.combine\r\nimport kotlinx.coroutines.flow.first\r\nimport kotlinx.coroutines.launch\r\n\r\ndata class SettingsState(\r\n    val apiBaseUrl: String = \"\",\r\n    val maxMarkers: String = \"20\",\r\n    val maxRadius: String = \"2000\",\r\n    val onlyOwnMarkers: Boolean = true,\r\n    val notifyAboutFriend: Boolean = true\r\n)\r\n\r\n@HiltViewModel\r\nclass SettingsViewModel @Inject constructor(\r\n    private val prefs: AppPreferences\r\n) : ViewModel() {\r\n    private val _state = MutableStateFlow(SettingsState())\r\n    val state: StateFlow<SettingsState> = _state\r\n\r\n    fun load() {\r\n        viewModelScope.launch {\r\n            val apiBaseUrl = prefs.apiBaseUrl.first()\r\n            val maxMarkers = prefs.maxMarkers.first()\r\n            val maxRadius = prefs.maxRadius.first()\r\n            val onlyOwnMarkers = prefs.onlyOwnMarkers.first()\r\n            val notifyAboutFriend = prefs.notifyAboutFriend.first()\r\n            _state.value = SettingsState(\r\n                apiBaseUrl = apiBaseUrl,\r\n                maxMarkers = maxMarkers.toString(),\r\n                maxRadius = maxRadius.toString(),\r\n                onlyOwnMarkers = onlyOwnMarkers,\r\n                notifyAboutFriend = notifyAboutFriend\r\n            )\r\n        }\r\n    }\r\n\r\n    fun updateApiBaseUrl(value: String) {\r\n        _state.value = _state.value.copy(apiBaseUrl = value)\r\n    }\r\n\r\n    fun updateMaxMarkers(value: String) {\r\n        _state.value = _state.value.copy(maxMarkers = value.filter { it.isDigit() })\r\n    }\r\n\r\n    fun updateMaxRadius(value: String) {\r\n        _state.value = _state.value.copy(maxRadius = value.filter { it.isDigit() })\r\n    }\r\n\r\n    fun updateOnlyOwnMarkers(value: Boolean) {\r\n        _state.value = _state.value.copy(onlyOwnMarkers = value)\r\n    }\r\n\r\n    fun updateNotifyAboutFriend(value: Boolean) {\r\n        _state.value = _state.value.copy(notifyAboutFriend = value)\r\n    }\r\n\r\n    fun save() {\r\n        viewModelScope.launch {\r\n            val trimmed = _state.value.apiBaseUrl.trim()\r\n            val withScheme = if (trimmed.startsWith(\"http://\") || trimmed.startsWith(\"https://\")) {\r\n                trimmed\r\n            } else {\r\n                \"http://$trimmed\"\r\n            }\r\n            val normalized = if (withScheme.endsWith(\"/\")) withScheme else \"$withScheme/\"\r\n            prefs.setApiBaseUrl(normalized)\r\n            prefs.saveMapSettings(\r\n                maxMarkers = _state.value.maxMarkers.toIntOrNull()?.coerceAtLeast(1) ?: 20,\r\n                maxRadius = _state.value.maxRadius.toIntOrNull()?.coerceAtLeast(50) ?: 2000,\r\n                onlyOwnMarkers = _state.value.onlyOwnMarkers,\r\n                notifyAboutFriend = _state.value.notifyAboutFriend\r\n            )\r\n            _state.value = _state.value.copy(apiBaseUrl = normalized)\r\n        }\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt b/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt	(date 1778616473450)
+@@ -1,13 +1,15 @@
+ package com.friendzone.android.presentation.settings
+ 
++import android.content.Context
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
++import com.friendzone.android.core.location.LocationTrackingManager
+ import com.friendzone.android.data.local.AppPreferences
+ import dagger.hilt.android.lifecycle.HiltViewModel
++import dagger.hilt.android.qualifiers.ApplicationContext
+ import javax.inject.Inject
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+-import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.launch
+ 
+@@ -15,30 +17,28 @@
+     val apiBaseUrl: String = "",
+     val maxMarkers: String = "20",
+     val maxRadius: String = "2000",
++    val locationUpdateIntervalMinutes: String = "1.0",
+     val onlyOwnMarkers: Boolean = true,
+     val notifyAboutFriend: Boolean = true
+ )
+ 
+ @HiltViewModel
+ class SettingsViewModel @Inject constructor(
+-    private val prefs: AppPreferences
++    private val prefs: AppPreferences,
++    @ApplicationContext private val appContext: Context
+ ) : ViewModel() {
+     private val _state = MutableStateFlow(SettingsState())
+     val state: StateFlow<SettingsState> = _state
+ 
+     fun load() {
+         viewModelScope.launch {
+-            val apiBaseUrl = prefs.apiBaseUrl.first()
+-            val maxMarkers = prefs.maxMarkers.first()
+-            val maxRadius = prefs.maxRadius.first()
+-            val onlyOwnMarkers = prefs.onlyOwnMarkers.first()
+-            val notifyAboutFriend = prefs.notifyAboutFriend.first()
+             _state.value = SettingsState(
+-                apiBaseUrl = apiBaseUrl,
+-                maxMarkers = maxMarkers.toString(),
+-                maxRadius = maxRadius.toString(),
+-                onlyOwnMarkers = onlyOwnMarkers,
+-                notifyAboutFriend = notifyAboutFriend
++                apiBaseUrl = prefs.apiBaseUrl.first(),
++                maxMarkers = prefs.maxMarkers.first().toString(),
++                maxRadius = prefs.maxRadius.first().toString(),
++                locationUpdateIntervalMinutes = prefs.locationUpdateIntervalMinutes.first().toString(),
++                onlyOwnMarkers = prefs.onlyOwnMarkers.first(),
++                notifyAboutFriend = prefs.notifyAboutFriend.first()
+             )
+         }
+     }
+@@ -48,11 +48,31 @@
+     }
+ 
+     fun updateMaxMarkers(value: String) {
+-        _state.value = _state.value.copy(maxMarkers = value.filter { it.isDigit() })
++        _state.value = _state.value.copy(maxMarkers = value.filter(Char::isDigit))
+     }
+ 
+     fun updateMaxRadius(value: String) {
+-        _state.value = _state.value.copy(maxRadius = value.filter { it.isDigit() })
++        _state.value = _state.value.copy(maxRadius = value.filter(Char::isDigit))
++    }
++
++    fun updateLocationUpdateIntervalMinutes(value: String) {
++        val normalized = buildString {
++            var dotSeen = false
++            value.forEach { char ->
++                when {
++                    char.isDigit() -> append(char)
++                    char == '.' && !dotSeen -> {
++                        append(char)
++                        dotSeen = true
++                    }
++                    char == ',' && !dotSeen -> {
++                        append('.')
++                        dotSeen = true
++                    }
++                }
++            }
++        }
++        _state.value = _state.value.copy(locationUpdateIntervalMinutes = normalized)
+     }
+ 
+     fun updateOnlyOwnMarkers(value: Boolean) {
+@@ -72,14 +92,22 @@
+                 "http://$trimmed"
+             }
+             val normalized = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
++            val locationIntervalMinutes =
++                _state.value.locationUpdateIntervalMinutes.toDoubleOrNull()?.coerceAtLeast(0.1) ?: 1.0
++
+             prefs.setApiBaseUrl(normalized)
+             prefs.saveMapSettings(
+                 maxMarkers = _state.value.maxMarkers.toIntOrNull()?.coerceAtLeast(1) ?: 20,
+                 maxRadius = _state.value.maxRadius.toIntOrNull()?.coerceAtLeast(50) ?: 2000,
++                locationUpdateIntervalMinutes = locationIntervalMinutes,
+                 onlyOwnMarkers = _state.value.onlyOwnMarkers,
+                 notifyAboutFriend = _state.value.notifyAboutFriend
+             )
+-            _state.value = _state.value.copy(apiBaseUrl = normalized)
++            LocationTrackingManager.restart(appContext, locationIntervalMinutes)
++            _state.value = _state.value.copy(
++                apiBaseUrl = normalized,
++                locationUpdateIntervalMinutes = locationIntervalMinutes.toString()
++            )
+         }
+     }
+ }
+Index: app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt b/app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt
+new file mode 100644
+--- /dev/null	(date 1778616473447)
++++ b/app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt	(date 1778616473447)
+@@ -0,0 +1,21 @@
++package com.friendzone.android.core.location
++
++import android.content.Context
++import android.content.Intent
++import androidx.core.content.ContextCompat
++import com.friendzone.android.core.work.WorkScheduler
++
++object LocationTrackingManager {
++    fun start(context: Context, intervalMinutes: Double) {
++        WorkScheduler.scheduleLocationUploads(context, intervalMinutes)
++        ContextCompat.startForegroundService(
++            context,
++            Intent(context, LocationForegroundService::class.java)
++        )
++    }
++
++    fun restart(context: Context, intervalMinutes: Double) {
++        context.stopService(Intent(context, LocationForegroundService::class.java))
++        start(context, intervalMinutes)
++    }
++}
+Index: app/src/main/res/drawable/ic_zone_flag.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_zone_flag.xml b/app/src/main/res/drawable/ic_zone_flag.xml
+new file mode 100644
+--- /dev/null	(date 1778616977712)
++++ b/app/src/main/res/drawable/ic_zone_flag.xml	(date 1778616977712)
+@@ -0,0 +1,18 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="32dp"
++    android:height="32dp"
++    android:viewportWidth="32"
++    android:viewportHeight="32">
++    <path
++        android:fillColor="#2A255F"
++        android:pathData="M8,4L10,4L10,28L8,28Z" />
++    <path
++        android:fillColor="#E3874F"
++        android:pathData="M10,5C13.5,4 15.8,8 19.5,7C22,6.4 23.8,5 26,5L26,17C23.8,17 21.8,18.5 19.2,18.8C15.7,19.2 13.4,15.9 10,17Z" />
++    <path
++        android:fillColor="#FFF6E9"
++        android:pathData="M14,8L22,8L22,10L14,10Z" />
++    <path
++        android:fillColor="#FFF6E9"
++        android:pathData="M14,12L20,12L20,14L14,14Z" />
++</vector>
+Index: app/src/main/res/drawable/ic_device_beacon.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_device_beacon.xml b/app/src/main/res/drawable/ic_device_beacon.xml
+new file mode 100644
+--- /dev/null	(date 1778616977713)
++++ b/app/src/main/res/drawable/ic_device_beacon.xml	(date 1778616977713)
+@@ -0,0 +1,18 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="36dp"
++    android:height="36dp"
++    android:viewportWidth="36"
++    android:viewportHeight="36">
++    <path
++        android:fillColor="#334FD8C8"
++        android:pathData="M18,4A14,14 0 1,1 18,32A14,14 0 1,1 18,4Z" />
++    <path
++        android:fillColor="#664FD8C8"
++        android:pathData="M18,8A10,10 0 1,1 18,28A10,10 0 1,1 18,8Z" />
++    <path
++        android:fillColor="#FF4FD8C8"
++        android:pathData="M18,12A6,6 0 1,1 18,24A6,6 0 1,1 18,12Z" />
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M18,15A3,3 0 1,1 18,21A3,3 0 1,1 18,15Z" />
++</vector>
+Index: app/src/main/java/com/friendzone/android/presentation/map/MapScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.map\r\n\r\nimport android.graphics.Color as AndroidColor\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.Row\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.fillMaxWidth\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.layout.size\r\nimport androidx.compose.foundation.layout.statusBarsPadding\r\nimport androidx.compose.foundation.shape.CircleShape\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.foundation.text.KeyboardActions\r\nimport androidx.compose.foundation.text.KeyboardOptions\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.filled.LocationOn\r\nimport androidx.compose.material.icons.filled.Search\r\nimport androidx.compose.material.icons.filled.Settings\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.CardDefaults\r\nimport androidx.compose.material3.CircularProgressIndicator\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.material3.IconButton\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.OutlinedTextField\r\nimport androidx.compose.material3.OutlinedTextFieldDefaults\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.LaunchedEffect\r\nimport androidx.compose.runtime.collectAsState\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.runtime.mutableLongStateOf\r\nimport androidx.compose.runtime.mutableStateOf\r\nimport androidx.compose.runtime.remember\r\nimport androidx.compose.runtime.setValue\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.platform.LocalFocusManager\r\nimport androidx.compose.ui.text.input.ImeAction\r\nimport androidx.compose.ui.text.input.KeyboardType\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.compose.ui.viewinterop.AndroidView\r\nimport androidx.hilt.navigation.compose.hiltViewModel\r\nimport com.friendzone.android.presentation.theme.AppBackground\r\nimport com.friendzone.android.presentation.zones.ZoneEditorDialog\r\nimport com.friendzone.android.presentation.zones.ZoneUi\r\nimport org.osmdroid.events.MapAdapter\r\nimport org.osmdroid.events.ScrollEvent\r\nimport org.osmdroid.events.ZoomEvent\r\nimport org.osmdroid.tileprovider.tilesource.TileSourceFactory\r\nimport org.osmdroid.util.GeoPoint\r\nimport org.osmdroid.views.MapView\r\nimport org.osmdroid.views.overlay.Marker\r\nimport org.osmdroid.views.overlay.Polygon\r\nimport org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider\r\nimport org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay\r\n\r\nprivate val MapChromeColor = Color(0xFF120D33)\r\n\r\n@Composable\r\nfun MapScreen(\r\n    onOpenSettings: () -> Unit,\r\n    viewModel: MapViewModel = hiltViewModel()\r\n) {\r\n    val state by viewModel.state.collectAsState()\r\n    val focusManager = LocalFocusManager.current\r\n    var searchQuery by remember { mutableStateOf(\"\") }\r\n    var appliedFocusRequestId by remember { mutableLongStateOf(-1L) }\r\n\r\n    LaunchedEffect(Unit) {\r\n        viewModel.loadZones()\r\n    }\r\n\r\n    val visibleZones = remember(state.zones, state.showInactiveZones) {\r\n        if (state.showInactiveZones) state.zones else state.zones.filter { it.isActive }\r\n    }\r\n    val selectedZone = state.selectedZoneId?.let { zoneId ->\r\n        state.zones.firstOrNull { it.id == zoneId }\r\n    }\r\n\r\n    AppBackground {\r\n        Box(modifier = Modifier.fillMaxSize()) {\r\n            FriendZoneMap(\r\n                modifier = Modifier.fillMaxSize(),\r\n                zones = visibleZones,\r\n                focusTarget = state.focusTarget,\r\n                appliedFocusRequestId = appliedFocusRequestId,\r\n                onFocusApplied = { appliedFocusRequestId = it },\r\n                onCenterChanged = viewModel::updateMapCenter,\r\n                onZoneClick = { viewModel.selectZone(it) },\r\n                onZoneDragEnd = viewModel::moveZone\r\n            )\r\n\r\n            Box(\r\n                modifier = Modifier\r\n                    .align(Alignment.TopCenter)\r\n                    .fillMaxWidth()\r\n                    .statusBarsPadding()\r\n                    .background(MapChromeColor)\r\n            )\r\n\r\n            Box(\r\n                modifier = Modifier\r\n                    .align(Alignment.Center)\r\n                    .padding(bottom = 32.dp),\r\n                contentAlignment = Alignment.Center\r\n            ) {\r\n                Box(\r\n                    modifier = Modifier\r\n                        .size(18.dp)\r\n                        .background(Color(0xFFE3874F), CircleShape)\r\n                )\r\n                Icon(\r\n                    imageVector = Icons.Default.LocationOn,\r\n                    contentDescription = \"Центр создания зоны\",\r\n                    tint = Color(0xFF1B153F),\r\n                    modifier = Modifier.size(52.dp)\r\n                )\r\n            }\r\n\r\n            Column(\r\n                modifier = Modifier\r\n                    .fillMaxWidth()\r\n                    .statusBarsPadding()\r\n                    .padding(horizontal = 16.dp, vertical = 12.dp)\r\n            ) {\r\n                SearchPanel(\r\n                    query = searchQuery,\r\n                    onQueryChange = { searchQuery = it },\r\n                    onSearch = {\r\n                        focusManager.clearFocus()\r\n                        viewModel.searchPlace(searchQuery)\r\n                    },\r\n                    onOpenSettings = onOpenSettings\r\n                )\r\n\r\n                if (state.isLoading) {\r\n                    Card(\r\n                        modifier = Modifier.padding(top = 12.dp),\r\n                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f))\r\n                    ) {\r\n                        Row(\r\n                            modifier = Modifier\r\n                                .fillMaxWidth()\r\n                                .padding(horizontal = 16.dp, vertical = 12.dp),\r\n                            verticalAlignment = Alignment.CenterVertically\r\n                        ) {\r\n                            CircularProgressIndicator(modifier = Modifier.size(20.dp))\r\n                            Text(\r\n                                text = \"Загружаем локальные зоны\",\r\n                                style = MaterialTheme.typography.bodyMedium,\r\n                                modifier = Modifier.padding(start = 12.dp)\r\n                            )\r\n                        }\r\n                    }\r\n                }\r\n\r\n                state.message?.let { message ->\r\n                    Card(\r\n                        modifier = Modifier\r\n                            .padding(top = 12.dp)\r\n                            .clickable { viewModel.clearMessage() },\r\n                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f))\r\n                    ) {\r\n                        Text(\r\n                            text = message,\r\n                            color = Color(0xFF1B153F),\r\n                            modifier = Modifier.padding(16.dp),\r\n                            style = MaterialTheme.typography.bodyMedium\r\n                        )\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    if (state.createDialogVisible) {\r\n        ZoneEditorDialog(\r\n            title = \"Новая зона\",\r\n            confirmText = \"Добавить\",\r\n            initialName = \"\",\r\n            initialRadius = \"300\",\r\n            initialIsActive = true,\r\n            maxRadiusMeters = state.maxRadiusMeters,\r\n            friends = state.friends,\r\n            initialDetectorFriendIds = emptyList(),\r\n            onDismiss = viewModel::dismissCreateDialog,\r\n            onConfirm = { name, radius, _, detectorFriendIds ->\r\n                viewModel.createZone(name, radius, detectorFriendIds)\r\n            }\r\n        )\r\n    }\r\n\r\n    if (selectedZone != null) {\r\n        ZoneEditorDialog(\r\n            title = \"Редактирование зоны\",\r\n            confirmText = \"Сохранить\",\r\n            initialName = selectedZone.name,\r\n            initialRadius = selectedZone.radiusMeters.toInt().toString(),\r\n            initialIsActive = selectedZone.isActive,\r\n            maxRadiusMeters = state.maxRadiusMeters,\r\n            friends = state.friends,\r\n            initialDetectorFriendIds = selectedZone.detectorFriendIds,\r\n            onDismiss = viewModel::clearSelectedZone,\r\n            onConfirm = { name, radius, isActive, detectorFriendIds ->\r\n                viewModel.updateZone(\r\n                    selectedZone.copy(\r\n                        name = name,\r\n                        radiusMeters = radius,\r\n                        isActive = isActive,\r\n                        detectorFriendIds = detectorFriendIds\r\n                    )\r\n                )\r\n            },\r\n            onDelete = { viewModel.deleteZone(selectedZone.id) }\r\n        )\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun SearchPanel(\r\n    query: String,\r\n    onQueryChange: (String) -> Unit,\r\n    onSearch: () -> Unit,\r\n    onOpenSettings: () -> Unit\r\n) {\r\n    OutlinedTextField(\r\n        value = query,\r\n        onValueChange = onQueryChange,\r\n        modifier = Modifier.fillMaxWidth(),\r\n        singleLine = true,\r\n        placeholder = { Text(\"Поиск места\") },\r\n        leadingIcon = {\r\n            IconButton(onClick = onSearch) {\r\n                Icon(Icons.Default.Search, contentDescription = \"Искать место\")\r\n            }\r\n        },\r\n        trailingIcon = {\r\n            IconButton(onClick = onOpenSettings) {\r\n                Icon(Icons.Default.Settings, contentDescription = \"Настройки\")\r\n            }\r\n        },\r\n        shape = RoundedCornerShape(14.dp),\r\n        keyboardOptions = KeyboardOptions(\r\n            imeAction = ImeAction.Search,\r\n            keyboardType = KeyboardType.Text\r\n        ),\r\n        keyboardActions = KeyboardActions(onSearch = { onSearch() }),\r\n        colors = OutlinedTextFieldDefaults.colors(\r\n            focusedContainerColor = Color.White.copy(alpha = 0.95f),\r\n            unfocusedContainerColor = Color.White.copy(alpha = 0.95f),\r\n            focusedBorderColor = Color.Transparent,\r\n            unfocusedBorderColor = Color.Transparent\r\n        )\r\n    )\r\n}\r\n\r\n@Composable\r\nprivate fun FriendZoneMap(\r\n    modifier: Modifier,\r\n    zones: List<ZoneUi>,\r\n    focusTarget: MapFocusTarget?,\r\n    appliedFocusRequestId: Long,\r\n    onFocusApplied: (Long) -> Unit,\r\n    onCenterChanged: (Double, Double) -> Unit,\r\n    onZoneClick: (String) -> Unit,\r\n    onZoneDragEnd: (String, Double, Double) -> Unit\r\n) {\r\n    AndroidView(\r\n        modifier = modifier,\r\n        factory = { context ->\r\n            MapView(context).apply {\r\n                setTileSource(TileSourceFactory.MAPNIK)\r\n                setMultiTouchControls(true)\r\n                controller.setZoom(15.0)\r\n                controller.setCenter(GeoPoint(55.751244, 37.618423))\r\n\r\n                addMapListener(object : MapAdapter() {\r\n                    override fun onScroll(event: ScrollEvent?): Boolean {\r\n                        val center = mapCenter\r\n                        onCenterChanged(center.latitude, center.longitude)\r\n                        return true\r\n                    }\r\n\r\n                    override fun onZoom(event: ZoomEvent?): Boolean {\r\n                        val center = mapCenter\r\n                        onCenterChanged(center.latitude, center.longitude)\r\n                        return true\r\n                    }\r\n                })\r\n\r\n                val myLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), this).apply {\r\n                    enableMyLocation()\r\n                }\r\n                overlays.add(myLocation)\r\n            }\r\n        },\r\n        update = { mapView ->\r\n            if (focusTarget != null && focusTarget.requestId != appliedFocusRequestId) {\r\n                mapView.controller.setZoom(focusTarget.zoom)\r\n                mapView.controller.animateTo(GeoPoint(focusTarget.latitude, focusTarget.longitude))\r\n                onFocusApplied(focusTarget.requestId)\r\n            }\r\n\r\n            mapView.overlays.removeAll { overlay ->\r\n                overlay is Marker || (overlay is Polygon && overlay.title == \"zoneOverlay\")\r\n            }\r\n\r\n            val circles = mutableListOf<Polygon>()\r\n            val markers = mutableListOf<Marker>()\r\n\r\n            zones.forEach { zone ->\r\n                val point = GeoPoint(zone.centerLat, zone.centerLon)\r\n                val marker = Marker(mapView).apply {\r\n                    id = zone.id\r\n                    position = point\r\n                    title = zone.name\r\n                    subDescription = \"${zone.radiusMeters.toInt()} м\"\r\n                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)\r\n                    isDraggable = true\r\n                    relatedObject = zone.id\r\n                    setOnMarkerClickListener { clickedMarker, _ ->\r\n                        val clickedId = clickedMarker.relatedObject as? String ?: return@setOnMarkerClickListener true\r\n                        onZoneClick(clickedId)\r\n                        true\r\n                    }\r\n                    setOnMarkerDragListener(object : Marker.OnMarkerDragListener {\r\n                        override fun onMarkerDrag(marker: Marker?) = Unit\r\n\r\n                        override fun onMarkerDragStart(marker: Marker?) = Unit\r\n\r\n                        override fun onMarkerDragEnd(marker: Marker?) {\r\n                            val draggedId = marker?.relatedObject as? String ?: return\r\n                            val draggedPosition = marker.position\r\n                            onZoneDragEnd(draggedId, draggedPosition.latitude, draggedPosition.longitude)\r\n                        }\r\n                    })\r\n                }\r\n\r\n                val circle = Polygon().apply {\r\n                    title = \"zoneOverlay\"\r\n                    points = Polygon.pointsAsCircle(point, zone.radiusMeters.coerceAtLeast(50.0))\r\n                    if (zone.isActive) {\r\n                        fillPaint.color = AndroidColor.argb(70, 227, 135, 79)\r\n                        outlinePaint.color = AndroidColor.argb(170, 227, 135, 79)\r\n                    } else {\r\n                        fillPaint.color = AndroidColor.argb(45, 140, 140, 140)\r\n                        outlinePaint.color = AndroidColor.argb(130, 140, 140, 140)\r\n                    }\r\n                }\r\n\r\n                circles.add(circle)\r\n                markers.add(marker)\r\n            }\r\n\r\n            mapView.overlays.addAll(circles)\r\n            mapView.overlays.addAll(markers)\r\n\r\n            mapView.invalidate()\r\n        }\r\n    )\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/map/MapScreen.kt b/app/src/main/java/com/friendzone/android/presentation/map/MapScreen.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/map/MapScreen.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/map/MapScreen.kt	(date 1778616977713)
+@@ -44,7 +44,9 @@
+ import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.viewinterop.AndroidView
++import androidx.core.content.ContextCompat
+ import androidx.hilt.navigation.compose.hiltViewModel
++import com.friendzone.android.R
+ import com.friendzone.android.presentation.theme.AppBackground
+ import com.friendzone.android.presentation.zones.ZoneEditorDialog
+ import com.friendzone.android.presentation.zones.ZoneUi
+@@ -56,8 +58,6 @@
+ import org.osmdroid.views.MapView
+ import org.osmdroid.views.overlay.Marker
+ import org.osmdroid.views.overlay.Polygon
+-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+ 
+ private val MapChromeColor = Color(0xFF120D33)
+ 
+@@ -87,6 +87,8 @@
+             FriendZoneMap(
+                 modifier = Modifier.fillMaxSize(),
+                 zones = visibleZones,
++                deviceLocation = state.deviceLocation,
++                friendMarkers = state.friendMarkers,
+                 focusTarget = state.focusTarget,
+                 appliedFocusRequestId = appliedFocusRequestId,
+                 onFocusApplied = { appliedFocusRequestId = it },
+@@ -138,6 +140,10 @@
+                     onOpenSettings = onOpenSettings
+                 )
+ 
++                if (state.deviceLocation != null || state.friendMarkers.isNotEmpty()) {
++                    BindingSummaryCard(state = state)
++                }
++
+                 if (state.isLoading) {
+                     Card(
+                         modifier = Modifier.padding(top = 12.dp),
+@@ -151,7 +157,7 @@
+                         ) {
+                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                             Text(
+-                                text = "Загружаем локальные зоны",
++                                text = "Загружаем зоны",
+                                 style = MaterialTheme.typography.bodyMedium,
+                                 modifier = Modifier.padding(start = 12.dp)
+                             )
+@@ -181,7 +187,7 @@
+     if (state.createDialogVisible) {
+         ZoneEditorDialog(
+             title = "Новая зона",
+-            confirmText = "Добавить",
++            confirmText = "Создать",
+             initialName = "",
+             initialRadius = "300",
+             initialIsActive = true,
+@@ -221,6 +227,45 @@
+     }
+ }
+ 
++@Composable
++private fun BindingSummaryCard(state: MapScreenState) {
++    val deviceZoneText = state.deviceLocation?.zoneNames
++        ?.takeIf { it.isNotEmpty() }
++        ?.joinToString()
++    val friendCount = state.friendMarkers.size
++    val friendText = if (!state.onlyOwnMarkers && friendCount > 0) {
++        "  •  Друзей на карте: $friendCount"
++    } else {
++        ""
++    }
++
++    Card(
++        modifier = Modifier.padding(top = 8.dp),
++        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f))
++    ) {
++        Row(
++            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
++            verticalAlignment = Alignment.CenterVertically
++        ) {
++            deviceZoneText?.let { zoneText ->
++                Text(
++                    text = "Вы в зоне: $zoneText$friendText",
++                    color = Color(0xFF1B153F),
++                    style = MaterialTheme.typography.bodySmall
++                )
++            } ?: Text(
++                text = if (state.onlyOwnMarkers || friendCount == 0) {
++                    "Геопозиция активна"
++                } else {
++                    "Геопозиция активна  •  Друзей на карте: $friendCount"
++                },
++                color = Color(0xFF1B153F),
++                style = MaterialTheme.typography.bodySmall
++            )
++        }
++    }
++}
++
+ @Composable
+ private fun SearchPanel(
+     query: String,
+@@ -236,7 +281,7 @@
+         placeholder = { Text("Поиск места") },
+         leadingIcon = {
+             IconButton(onClick = onSearch) {
+-                Icon(Icons.Default.Search, contentDescription = "Искать место")
++                Icon(Icons.Default.Search, contentDescription = "Поиск места")
+             }
+         },
+         trailingIcon = {
+@@ -263,6 +308,8 @@
+ private fun FriendZoneMap(
+     modifier: Modifier,
+     zones: List<ZoneUi>,
++    deviceLocation: DeviceLocationUi?,
++    friendMarkers: List<FriendMapUi>,
+     focusTarget: MapFocusTarget?,
+     appliedFocusRequestId: Long,
+     onFocusApplied: (Long) -> Unit,
+@@ -292,11 +339,6 @@
+                         return true
+                     }
+                 })
+-
+-                val myLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), this).apply {
+-                    enableMyLocation()
+-                }
+-                overlays.add(myLocation)
+             }
+         },
+         update = { mapView ->
+@@ -323,6 +365,7 @@
+                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                     isDraggable = true
+                     relatedObject = zone.id
++                    icon = ContextCompat.getDrawable(mapView.context, R.drawable.ic_zone_flag)
+                     setOnMarkerClickListener { clickedMarker, _ ->
+                         val clickedId = clickedMarker.relatedObject as? String ?: return@setOnMarkerClickListener true
+                         onZoneClick(clickedId)
+@@ -330,9 +373,7 @@
+                     }
+                     setOnMarkerDragListener(object : Marker.OnMarkerDragListener {
+                         override fun onMarkerDrag(marker: Marker?) = Unit
+-
+                         override fun onMarkerDragStart(marker: Marker?) = Unit
+-
+                         override fun onMarkerDragEnd(marker: Marker?) {
+                             val draggedId = marker?.relatedObject as? String ?: return
+                             val draggedPosition = marker.position
+@@ -357,9 +398,32 @@
+                 markers.add(marker)
+             }
+ 
++            deviceLocation?.let { device ->
++                markers.add(
++                    Marker(mapView).apply {
++                        position = GeoPoint(device.latitude, device.longitude)
++                        title = "Это устройство"
++                        subDescription = device.zoneNames.takeIf { it.isNotEmpty() }?.joinToString() ?: "Вне зон"
++                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
++                        icon = ContextCompat.getDrawable(mapView.context, R.drawable.ic_device_beacon)
++                    }
++                )
++            }
++
++            friendMarkers.forEach { friend ->
++                markers.add(
++                    Marker(mapView).apply {
++                        position = GeoPoint(friend.latitude, friend.longitude)
++                        title = friend.displayName
++                        subDescription = friend.zoneNames.takeIf { it.isNotEmpty() }?.joinToString() ?: friend.tag
++                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
++                        icon = mapView.context.getDrawable(android.R.drawable.presence_away)
++                    }
++                )
++            }
++
+             mapView.overlays.addAll(circles)
+             mapView.overlays.addAll(markers)
+-
+             mapView.invalidate()
+         }
+     )
+Index: app/src/main/java/com/friendzone/android/app/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.app\r\n\r\nimport android.os.Bundle\r\nimport androidx.activity.ComponentActivity\r\nimport androidx.activity.compose.setContent\r\nimport androidx.activity.enableEdgeToEdge\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.Surface\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen\r\nimport androidx.hilt.navigation.compose.hiltViewModel\r\nimport com.friendzone.android.presentation.auth.AuthViewModel\r\nimport com.friendzone.android.presentation.navigation.AppNavHost\r\nimport com.friendzone.android.presentation.permissions.PermissionsGate\r\nimport com.friendzone.android.presentation.theme.FriendZoneTheme\r\nimport dagger.hilt.android.AndroidEntryPoint\r\n\r\n@AndroidEntryPoint\r\nclass MainActivity : ComponentActivity() {\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        installSplashScreen()\r\n        super.onCreate(savedInstanceState)\r\n        enableEdgeToEdge()\r\n\r\n        setContent {\r\n            FriendZoneTheme {\r\n                Surface(color = MaterialTheme.colorScheme.background) {\r\n                    val authViewModel = hiltViewModel<AuthViewModel>()\r\n                    Box(modifier = Modifier.fillMaxSize()) {\r\n                        PermissionsGate(onReady = { })\r\n                        AppNavHost(authViewModel = authViewModel)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/app/MainActivity.kt b/app/src/main/java/com/friendzone/android/app/MainActivity.kt
+--- a/app/src/main/java/com/friendzone/android/app/MainActivity.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/app/MainActivity.kt	(date 1778616473451)
+@@ -5,15 +5,18 @@
+ import androidx.activity.compose.setContent
+ import androidx.activity.enableEdgeToEdge
+ import androidx.compose.foundation.layout.Box
+-import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.Surface
+ import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.collectAsState
++import androidx.compose.runtime.getValue
+ import androidx.compose.ui.Modifier
+ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+ import androidx.hilt.navigation.compose.hiltViewModel
++import com.friendzone.android.core.location.LocationTrackingManager
+ import com.friendzone.android.presentation.auth.AuthViewModel
+ import com.friendzone.android.presentation.navigation.AppNavHost
+ import com.friendzone.android.presentation.permissions.PermissionsGate
++import com.friendzone.android.presentation.settings.SettingsViewModel
+ import com.friendzone.android.presentation.theme.FriendZoneTheme
+ import dagger.hilt.android.AndroidEntryPoint
+ 
+@@ -26,16 +29,25 @@
+ 
+         setContent {
+             FriendZoneTheme {
+-                Surface(color = MaterialTheme.colorScheme.background) {
+-                    val authViewModel = hiltViewModel<AuthViewModel>()
+-                    Box(modifier = Modifier.fillMaxSize()) {
+-                        PermissionsGate(onReady = { })
+-                        AppNavHost(authViewModel = authViewModel)
+-                    }
++                val authViewModel = hiltViewModel<AuthViewModel>()
++                val settingsViewModel = hiltViewModel<SettingsViewModel>()
++                val settingsState by settingsViewModel.state.collectAsState()
++
++                LaunchedEffect(Unit) {
++                    settingsViewModel.load()
++                }
++
++                Box(modifier = Modifier.fillMaxSize()) {
++                    PermissionsGate(
++                        onReady = {
++                            val intervalMinutes =
++                                settingsState.locationUpdateIntervalMinutes.toDoubleOrNull()?.coerceAtLeast(0.1) ?: 1.0
++                            LocationTrackingManager.start(this@MainActivity, intervalMinutes)
++                        }
++                    )
++                    AppNavHost(authViewModel = authViewModel)
+                 }
+             }
+         }
+     }
+ }
+-
+-
+Index: app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.settings\r\n\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.layout.Arrangement\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.Row\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.fillMaxWidth\r\nimport androidx.compose.foundation.layout.navigationBarsPadding\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.layout.statusBarsPadding\r\nimport androidx.compose.foundation.rememberScrollState\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.foundation.verticalScroll\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.automirrored.filled.ArrowBack\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.CardDefaults\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.material3.IconButton\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.OutlinedTextField\r\nimport androidx.compose.material3.OutlinedTextFieldDefaults\r\nimport androidx.compose.material3.Switch\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.LaunchedEffect\r\nimport androidx.compose.runtime.collectAsState\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.text.font.FontWeight\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.hilt.navigation.compose.hiltViewModel\r\n\r\nprivate val SettingsBackground = Color(0xFF120D33)\r\nprivate val SettingsCard = Color(0xFFFAFAFC)\r\nprivate val SettingsAccent = Color(0xFFE3874F)\r\nprivate val SettingsText = Color(0xFF1C1840)\r\n\r\n@Composable\r\nfun SettingsScreen(\r\n    onBack: () -> Unit,\r\n    viewModel: SettingsViewModel = hiltViewModel()\r\n) {\r\n    val state by viewModel.state.collectAsState()\r\n\r\n    LaunchedEffect(Unit) {\r\n        viewModel.load()\r\n    }\r\n\r\n    Box(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .background(SettingsBackground)\r\n    ) {\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .statusBarsPadding()\r\n                .navigationBarsPadding()\r\n                .verticalScroll(rememberScrollState())\r\n                .padding(horizontal = 16.dp, vertical = 14.dp)\r\n        ) {\r\n            Card(\r\n                shape = RoundedCornerShape(10.dp),\r\n                colors = CardDefaults.cardColors(containerColor = Color.White)\r\n            ) {\r\n                IconButton(\r\n                    onClick = {\r\n                        viewModel.save()\r\n                        onBack()\r\n                    }\r\n                ) {\r\n                    Icon(\r\n                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,\r\n                        contentDescription = \"Назад\",\r\n                        tint = SettingsText\r\n                    )\r\n                }\r\n            }\r\n\r\n            SettingsFieldCard(\r\n                label = \"IP сервера\",\r\n                value = state.apiBaseUrl,\r\n                onValueChange = viewModel::updateApiBaseUrl\r\n            )\r\n            SettingsFieldCard(\r\n                label = \"Максимальное кол-во меток\",\r\n                value = state.maxMarkers,\r\n                onValueChange = viewModel::updateMaxMarkers\r\n            )\r\n            SettingsFieldCard(\r\n                label = \"Максимальный радиус зоны\",\r\n                value = state.maxRadius,\r\n                onValueChange = viewModel::updateMaxRadius\r\n            )\r\n            SettingsSwitchCard(\r\n                title = \"Выполнять поиск только по своим меткам\",\r\n                checked = state.onlyOwnMarkers,\r\n                onCheckedChange = viewModel::updateOnlyOwnMarkers\r\n            )\r\n            SettingsSwitchCard(\r\n                title = \"Уведомлять о нахождении друга\",\r\n                checked = state.notifyAboutFriend,\r\n                onCheckedChange = viewModel::updateNotifyAboutFriend\r\n            )\r\n\r\n            SettingsActionCard(\"Сигнал при пересечении зоны...\")\r\n            SettingsActionCard(\"Сигнал при пересечении с другом...\")\r\n            SettingsActionCard(\"О приложении...\")\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun SettingsFieldCard(\r\n    label: String,\r\n    value: String,\r\n    onValueChange: (String) -> Unit\r\n) {\r\n    Card(\r\n        modifier = Modifier\r\n            .fillMaxWidth()\r\n            .padding(top = 12.dp),\r\n        shape = RoundedCornerShape(10.dp),\r\n        colors = CardDefaults.cardColors(containerColor = SettingsCard)\r\n    ) {\r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(horizontal = 14.dp, vertical = 8.dp),\r\n            verticalAlignment = Alignment.CenterVertically\r\n        ) {\r\n            Text(\r\n                text = label,\r\n                color = SettingsText,\r\n                style = MaterialTheme.typography.bodyMedium,\r\n                modifier = Modifier.weight(1f)\r\n            )\r\n            OutlinedTextField(\r\n                value = value,\r\n                onValueChange = onValueChange,\r\n                modifier = Modifier.fillMaxWidth(0.38f),\r\n                singleLine = true,\r\n                textStyle = MaterialTheme.typography.bodyMedium.copy(\r\n                    color = SettingsAccent,\r\n                    fontWeight = FontWeight.Bold\r\n                ),\r\n                colors = OutlinedTextFieldDefaults.colors(\r\n                    focusedContainerColor = Color.Transparent,\r\n                    unfocusedContainerColor = Color.Transparent,\r\n                    focusedBorderColor = Color.Transparent,\r\n                    unfocusedBorderColor = Color.Transparent\r\n                )\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun SettingsSwitchCard(\r\n    title: String,\r\n    checked: Boolean,\r\n    onCheckedChange: (Boolean) -> Unit\r\n) {\r\n    Card(\r\n        modifier = Modifier\r\n            .fillMaxWidth()\r\n            .padding(top = 12.dp),\r\n        shape = RoundedCornerShape(10.dp),\r\n        colors = CardDefaults.cardColors(containerColor = SettingsCard)\r\n    ) {\r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(horizontal = 14.dp, vertical = 10.dp),\r\n            verticalAlignment = Alignment.CenterVertically\r\n        ) {\r\n            Text(\r\n                text = title,\r\n                color = SettingsText,\r\n                style = MaterialTheme.typography.bodyMedium,\r\n                modifier = Modifier.weight(1f)\r\n            )\r\n            Switch(\r\n                checked = checked,\r\n                onCheckedChange = onCheckedChange\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun SettingsActionCard(\r\n    title: String\r\n) {\r\n    Card(\r\n        modifier = Modifier\r\n            .fillMaxWidth()\r\n            .padding(top = 12.dp),\r\n        shape = RoundedCornerShape(10.dp),\r\n        colors = CardDefaults.cardColors(containerColor = SettingsCard)\r\n    ) {\r\n        Text(\r\n            text = title,\r\n            color = SettingsText,\r\n            style = MaterialTheme.typography.bodyMedium,\r\n            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)\r\n        )\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt b/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt	(date 1778616473450)
+@@ -1,7 +1,6 @@
+ package com.friendzone.android.presentation.settings
+ 
+ import androidx.compose.foundation.background
+-import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+@@ -82,35 +81,16 @@
+                 }
+             }
+ 
+-            SettingsFieldCard(
+-                label = "IP сервера",
+-                value = state.apiBaseUrl,
+-                onValueChange = viewModel::updateApiBaseUrl
+-            )
+-            SettingsFieldCard(
+-                label = "Максимальное кол-во меток",
+-                value = state.maxMarkers,
+-                onValueChange = viewModel::updateMaxMarkers
+-            )
++            SettingsFieldCard("Адрес сервера", state.apiBaseUrl, viewModel::updateApiBaseUrl)
++            SettingsFieldCard("Максимум меток", state.maxMarkers, viewModel::updateMaxMarkers)
++            SettingsFieldCard("Максимальный радиус зоны", state.maxRadius, viewModel::updateMaxRadius)
+             SettingsFieldCard(
+-                label = "Максимальный радиус зоны",
+-                value = state.maxRadius,
+-                onValueChange = viewModel::updateMaxRadius
+-            )
+-            SettingsSwitchCard(
+-                title = "Выполнять поиск только по своим меткам",
+-                checked = state.onlyOwnMarkers,
+-                onCheckedChange = viewModel::updateOnlyOwnMarkers
++                "Обновление геолокации, мин",
++                state.locationUpdateIntervalMinutes,
++                viewModel::updateLocationUpdateIntervalMinutes
+             )
+-            SettingsSwitchCard(
+-                title = "Уведомлять о нахождении друга",
+-                checked = state.notifyAboutFriend,
+-                onCheckedChange = viewModel::updateNotifyAboutFriend
+-            )
+-
+-            SettingsActionCard("Сигнал при пересечении зоны...")
+-            SettingsActionCard("Сигнал при пересечении с другом...")
+-            SettingsActionCard("О приложении...")
++            SettingsSwitchCard("Показывать только свои метки", state.onlyOwnMarkers, viewModel::updateOnlyOwnMarkers)
++            SettingsSwitchCard("Уведомлять о друге", state.notifyAboutFriend, viewModel::updateNotifyAboutFriend)
+         }
+     }
+ }
+@@ -143,7 +123,7 @@
+             OutlinedTextField(
+                 value = value,
+                 onValueChange = onValueChange,
+-                modifier = Modifier.fillMaxWidth(0.38f),
++                modifier = Modifier.fillMaxWidth(0.4f),
+                 singleLine = true,
+                 textStyle = MaterialTheme.typography.bodyMedium.copy(
+                     color = SettingsAccent,
+@@ -192,23 +172,3 @@
+         }
+     }
+ }
+-
+-@Composable
+-private fun SettingsActionCard(
+-    title: String
+-) {
+-    Card(
+-        modifier = Modifier
+-            .fillMaxWidth()
+-            .padding(top = 12.dp),
+-        shape = RoundedCornerShape(10.dp),
+-        colors = CardDefaults.cardColors(containerColor = SettingsCard)
+-    ) {
+-        Text(
+-            text = title,
+-            color = SettingsText,
+-            style = MaterialTheme.typography.bodyMedium,
+-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)
+-        )
+-    }
+-}
+Index: app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.friends\r\n\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.foundation.layout.Arrangement\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.Row\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.fillMaxWidth\r\nimport androidx.compose.foundation.layout.offset\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.layout.statusBarsPadding\r\nimport androidx.compose.foundation.lazy.LazyColumn\r\nimport androidx.compose.foundation.lazy.items\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.filled.Edit\r\nimport androidx.compose.material3.AlertDialog\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.CardDefaults\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.material3.IconButton\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.OutlinedTextField\r\nimport androidx.compose.material3.OutlinedTextFieldDefaults\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.material3.TextButton\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.LaunchedEffect\r\nimport androidx.compose.runtime.collectAsState\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.runtime.mutableStateOf\r\nimport androidx.compose.runtime.remember\r\nimport androidx.compose.runtime.setValue\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.text.font.FontWeight\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.hilt.navigation.compose.hiltViewModel\r\n\r\nprivate val FriendsPageBackground = Color(0xFF120D33)\r\nprivate val FriendsCardBackground = Color(0xFFFAFAFC)\r\nprivate val FriendsAccent = Color(0xFFE3874F)\r\nprivate val FriendsBlue = Color(0xFF57AFE6)\r\nprivate val FriendsText = Color(0xFF1C1840)\r\n\r\n@Composable\r\nfun FriendsScreen(\r\n    viewModel: FriendsViewModel = hiltViewModel()\r\n) {\r\n    val state by viewModel.state.collectAsState()\r\n    var filterText by remember { mutableStateOf(\"\") }\r\n    var editingFriend by remember { mutableStateOf<FriendUi?>(null) }\r\n\r\n    LaunchedEffect(Unit) {\r\n        viewModel.load()\r\n    }\r\n\r\n    val filteredFriends = remember(state.friends, filterText) {\r\n        val query = filterText.trim()\r\n        if (query.isBlank()) {\r\n            state.friends\r\n        } else {\r\n            state.friends.filter { friend ->\r\n                friend.displayName.contains(query, ignoreCase = true) ||\r\n                    friend.tag.contains(query, ignoreCase = true)\r\n            }\r\n        }\r\n    }\r\n\r\n    Box(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .background(FriendsPageBackground)\r\n    ) {\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .statusBarsPadding()\r\n                .padding(horizontal = 16.dp, vertical = 14.dp)\r\n        ) {\r\n            FilterField(\r\n                value = filterText,\r\n                onValueChange = { filterText = it }\r\n            )\r\n\r\n            LazyColumn(\r\n                modifier = Modifier\r\n                    .fillMaxSize()\r\n                    .padding(top = 18.dp),\r\n                verticalArrangement = Arrangement.spacedBy(16.dp)\r\n            ) {\r\n                items(filteredFriends) { friend ->\r\n                    FriendCard(friend = friend, onEdit = { editingFriend = friend })\r\n                }\r\n            }\r\n        }\r\n\r\n        state.message?.let { message ->\r\n            Card(\r\n                modifier = Modifier\r\n                    .align(Alignment.BottomCenter)\r\n                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)\r\n                    .clickable { viewModel.clearMessage() },\r\n                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f))\r\n            ) {\r\n                Text(\r\n                    text = message,\r\n                    color = FriendsText,\r\n                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)\r\n                )\r\n            }\r\n        }\r\n    }\r\n\r\n    if (editingFriend != null) {\r\n        RenameFriendDialog(\r\n            friend = editingFriend!!,\r\n            onDismiss = { editingFriend = null },\r\n            onConfirm = { friendId, displayName ->\r\n                viewModel.renameFriend(friendId, displayName)\r\n                editingFriend = null\r\n            }\r\n        )\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun FilterField(\r\n    value: String,\r\n    onValueChange: (String) -> Unit\r\n) {\r\n    Box {\r\n        OutlinedTextField(\r\n            value = value,\r\n            onValueChange = onValueChange,\r\n            modifier = Modifier.fillMaxWidth(),\r\n            singleLine = true,\r\n            shape = RoundedCornerShape(10.dp),\r\n            colors = OutlinedTextFieldDefaults.colors(\r\n                focusedContainerColor = Color.White,\r\n                unfocusedContainerColor = Color.White,\r\n                focusedBorderColor = Color.Transparent,\r\n                unfocusedBorderColor = Color.Transparent,\r\n                focusedTextColor = FriendsText,\r\n                unfocusedTextColor = FriendsText\r\n            )\r\n        )\r\n        Card(\r\n            modifier = Modifier\r\n                .padding(start = 10.dp)\r\n                .offset(y = (-6).dp),\r\n            shape = RoundedCornerShape(4.dp),\r\n            colors = CardDefaults.cardColors(containerColor = Color.White)\r\n        ) {\r\n            Text(\r\n                text = \"Фильтр\",\r\n                color = FriendsBlue,\r\n                style = MaterialTheme.typography.labelMedium,\r\n                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun FriendCard(\r\n    friend: FriendUi,\r\n    onEdit: () -> Unit\r\n) {\r\n    Card(\r\n        shape = RoundedCornerShape(14.dp),\r\n        colors = CardDefaults.cardColors(containerColor = FriendsCardBackground)\r\n    ) {\r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(horizontal = 14.dp, vertical = 12.dp),\r\n            verticalAlignment = Alignment.CenterVertically\r\n        ) {\r\n            Column(modifier = Modifier.weight(1f)) {\r\n                Text(\r\n                    text = friend.displayName,\r\n                    color = FriendsText,\r\n                    style = MaterialTheme.typography.titleLarge,\r\n                    fontWeight = FontWeight.ExtraBold\r\n                )\r\n                Text(\r\n                    text = friend.tag,\r\n                    color = FriendsAccent,\r\n                    style = MaterialTheme.typography.bodyMedium\r\n                )\r\n            }\r\n            IconButton(onClick = onEdit) {\r\n                Icon(\r\n                    imageVector = Icons.Default.Edit,\r\n                    contentDescription = \"Переименовать друга\",\r\n                    tint = FriendsText\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun RenameFriendDialog(\r\n    friend: FriendUi,\r\n    onDismiss: () -> Unit,\r\n    onConfirm: (String, String) -> Unit\r\n) {\r\n    var name by remember(friend.id) { mutableStateOf(friend.displayName) }\r\n\r\n    AlertDialog(\r\n        onDismissRequest = onDismiss,\r\n        title = { Text(\"Имя друга\") },\r\n        text = {\r\n            OutlinedTextField(\r\n                value = name,\r\n                onValueChange = { name = it },\r\n                singleLine = true,\r\n                label = { Text(\"Отображаемое имя\") }\r\n            )\r\n        },\r\n        confirmButton = {\r\n            TextButton(onClick = { onConfirm(friend.id, name) }) {\r\n                Text(\"Сохранить\")\r\n            }\r\n        },\r\n        dismissButton = {\r\n            TextButton(onClick = onDismiss) {\r\n                Text(\"Отмена\")\r\n            }\r\n        }\r\n    )\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt b/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt	(date 1778616473452)
+@@ -115,12 +115,13 @@
+         }
+     }
+ 
+-    if (editingFriend != null) {
+-        RenameFriendDialog(
+-            friend = editingFriend!!,
++    editingFriend?.let { friend ->
++        FriendDialog(
++            friend = friend,
+             onDismiss = { editingFriend = null },
+-            onConfirm = { friendId, displayName ->
++            onSave = { friendId, displayName, latitude, longitude ->
+                 viewModel.renameFriend(friendId, displayName)
++                viewModel.updateFriendLocation(friendId, latitude, longitude)
+                 editingFriend = null
+             }
+         )
+@@ -192,11 +193,17 @@
+                     color = FriendsAccent,
+                     style = MaterialTheme.typography.bodyMedium
+                 )
++                Text(
++                    text = friend.locationSummary(),
++                    color = FriendsBlue,
++                    style = MaterialTheme.typography.bodySmall,
++                    modifier = Modifier.padding(top = 4.dp)
++                )
+             }
+             IconButton(onClick = onEdit) {
+                 Icon(
+                     imageVector = Icons.Default.Edit,
+-                    contentDescription = "Переименовать друга",
++                    contentDescription = "Редактировать друга",
+                     tint = FriendsText
+                 )
+             }
+@@ -205,26 +212,42 @@
+ }
+ 
+ @Composable
+-private fun RenameFriendDialog(
++private fun FriendDialog(
+     friend: FriendUi,
+     onDismiss: () -> Unit,
+-    onConfirm: (String, String) -> Unit
++    onSave: (String, String, String, String) -> Unit
+ ) {
+     var name by remember(friend.id) { mutableStateOf(friend.displayName) }
++    var latitude by remember(friend.id) { mutableStateOf(friend.latitude?.toString().orEmpty()) }
++    var longitude by remember(friend.id) { mutableStateOf(friend.longitude?.toString().orEmpty()) }
+ 
+     AlertDialog(
+         onDismissRequest = onDismiss,
+-        title = { Text("Имя друга") },
++        title = { Text("Привязка друга") },
+         text = {
+-            OutlinedTextField(
+-                value = name,
+-                onValueChange = { name = it },
+-                singleLine = true,
+-                label = { Text("Отображаемое имя") }
+-            )
++            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++                OutlinedTextField(
++                    value = name,
++                    onValueChange = { name = it },
++                    singleLine = true,
++                    label = { Text("Отображаемое имя") }
++                )
++                OutlinedTextField(
++                    value = latitude,
++                    onValueChange = { latitude = it },
++                    singleLine = true,
++                    label = { Text("Широта") }
++                )
++                OutlinedTextField(
++                    value = longitude,
++                    onValueChange = { longitude = it },
++                    singleLine = true,
++                    label = { Text("Долгота") }
++                )
++            }
+         },
+         confirmButton = {
+-            TextButton(onClick = { onConfirm(friend.id, name) }) {
++            TextButton(onClick = { onSave(friend.id, name, latitude, longitude) }) {
+                 Text("Сохранить")
+             }
+         },
+@@ -235,3 +258,11 @@
+         }
+     )
+ }
++
++private fun FriendUi.locationSummary(): String {
++    return if (latitude != null && longitude != null) {
++        "Широта %.5f, долгота %.5f".format(latitude, longitude)
++    } else {
++        "Геолокация не привязана"
++    }
++}
+Index: app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.friends\r\n\r\nimport androidx.lifecycle.ViewModel\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.friendzone.android.data.repository.FriendsRepository\r\nimport dagger.hilt.android.lifecycle.HiltViewModel\r\nimport javax.inject.Inject\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.StateFlow\r\nimport kotlinx.coroutines.launch\r\n\r\ndata class FriendUi(\r\n    val id: String,\r\n    val displayName: String,\r\n    val tag: String\r\n)\r\n\r\ndata class FriendsState(\r\n    val friends: List<FriendUi> = emptyList(),\r\n    val message: String? = null\r\n)\r\n\r\n@HiltViewModel\r\nclass FriendsViewModel @Inject constructor(\r\n    private val repository: FriendsRepository\r\n) : ViewModel() {\r\n    private val _state = MutableStateFlow(FriendsState())\r\n    val state: StateFlow<FriendsState> = _state\r\n\r\n    fun load() {\r\n        viewModelScope.launch {\r\n            val friends = repository.listFriends()\r\n            _state.value = _state.value.copy(\r\n                friends = friends.map { FriendUi(it.id, it.displayName, it.tag) }\r\n            )\r\n        }\r\n    }\r\n\r\n    fun addFriend(tag: String) {\r\n        if (tag.trim().isBlank()) {\r\n            _state.value = _state.value.copy(message = \"Введите тег друга\")\r\n            return\r\n        }\r\n        viewModelScope.launch {\r\n            repository.addFriend(tag)\r\n            _state.value = _state.value.copy(message = \"Друг добавлен локально\")\r\n            load()\r\n        }\r\n    }\r\n\r\n    fun renameFriend(friendId: String, name: String) {\r\n        if (name.trim().isBlank()) {\r\n            _state.value = _state.value.copy(message = \"Имя не может быть пустым\")\r\n            return\r\n        }\r\n        viewModelScope.launch {\r\n            repository.renameFriend(friendId, name)\r\n            _state.value = _state.value.copy(message = \"Имя друга обновлено\")\r\n            load()\r\n        }\r\n    }\r\n\r\n    fun clearMessage() {\r\n        _state.value = _state.value.copy(message = null)\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt b/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt	(date 1778616473451)
+@@ -4,6 +4,7 @@
+ import androidx.lifecycle.viewModelScope
+ import com.friendzone.android.data.repository.FriendsRepository
+ import dagger.hilt.android.lifecycle.HiltViewModel
++import java.time.Instant
+ import javax.inject.Inject
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+@@ -12,7 +13,10 @@
+ data class FriendUi(
+     val id: String,
+     val displayName: String,
+-    val tag: String
++    val tag: String,
++    val latitude: Double? = null,
++    val longitude: Double? = null,
++    val locationUpdatedAtIso: String? = null
+ )
+ 
+ data class FriendsState(
+@@ -29,9 +33,17 @@
+ 
+     fun load() {
+         viewModelScope.launch {
+-            val friends = repository.listFriends()
+             _state.value = _state.value.copy(
+-                friends = friends.map { FriendUi(it.id, it.displayName, it.tag) }
++                friends = repository.listFriends().map {
++                    FriendUi(
++                        id = it.id,
++                        displayName = it.displayName,
++                        tag = it.tag,
++                        latitude = it.latitude,
++                        longitude = it.longitude,
++                        locationUpdatedAtIso = it.locationUpdatedAtIso
++                    )
++                }
+             )
+         }
+     }
+@@ -43,7 +55,7 @@
+         }
+         viewModelScope.launch {
+             repository.addFriend(tag)
+-            _state.value = _state.value.copy(message = "Друг добавлен локально")
++            _state.value = _state.value.copy(message = "Друг добавлен")
+             load()
+         }
+     }
+@@ -55,7 +67,38 @@
+         }
+         viewModelScope.launch {
+             repository.renameFriend(friendId, name)
+-            _state.value = _state.value.copy(message = "Имя друга обновлено")
++            _state.value = _state.value.copy(message = "Имя обновлено")
++            load()
++        }
++    }
++
++    fun updateFriendLocation(friendId: String, latitude: String, longitude: String) {
++        val lat = latitude.trim()
++        val lon = longitude.trim()
++        if (lat.isBlank() && lon.isBlank()) {
++            viewModelScope.launch {
++                repository.updateFriendLocation(friendId, null, null)
++                _state.value = _state.value.copy(message = "Геолокация друга очищена")
++                load()
++            }
++            return
++        }
++
++        val parsedLat = lat.toDoubleOrNull()
++        val parsedLon = lon.toDoubleOrNull()
++        if (parsedLat == null || parsedLon == null) {
++            _state.value = _state.value.copy(message = "Координаты должны быть числами")
++            return
++        }
++
++        viewModelScope.launch {
++            repository.updateFriendLocation(
++                friendId = friendId,
++                latitude = parsedLat,
++                longitude = parsedLon,
++                deviceTimeIso = Instant.now().toString()
++            )
++            _state.value = _state.value.copy(message = "Геолокация друга сохранена")
+             load()
+         }
+     }
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\r\n\r\n    <uses-permission android:name=\"android.permission.INTERNET\" />\r\n    <uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\" />\r\n    <uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" />\r\n    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />\r\n    <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\" />\r\n    <uses-permission android:name=\"android.permission.WAKE_LOCK\" />\r\n\r\n    <application\r\n        android:name=\".app.FriendZoneApp\"\r\n        android:allowBackup=\"true\"\r\n        android:label=\"FriendZone\"\r\n        android:networkSecurityConfig=\"@xml/network_security_config\"\r\n        android:supportsRtl=\"true\"\r\n        android:theme=\"@style/Theme.FriendZone\">\r\n\r\n        <activity\r\n            android:name=\".app.MainActivity\"\r\n            android:exported=\"true\">\r\n            <intent-filter>\r\n                <action android:name=\"android.intent.action.MAIN\" />\r\n                <category android:name=\"android.intent.category.LAUNCHER\" />\r\n            </intent-filter>\r\n        </activity>\r\n\r\n        <service\r\n            android:name=\".core.location.LocationForegroundService\"\r\n            android:exported=\"false\"\r\n            android:foregroundServiceType=\"location\" />\r\n\r\n        <receiver\r\n            android:name=\".core.notifications.AlarmReceiver\"\r\n            android:exported=\"false\" />\r\n\r\n    </application>\r\n</manifest>\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+--- a/app/src/main/AndroidManifest.xml	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/AndroidManifest.xml	(date 1778615617291)
+@@ -6,6 +6,7 @@
+     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
+ 
+     <application
+Index: app/src/main/java/com/friendzone/android/core/location/LocationForegroundService.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.location\r\n\r\nimport android.app.Notification\r\nimport android.app.NotificationChannel\r\nimport android.app.NotificationManager\r\nimport android.app.Service\r\nimport android.content.Intent\r\nimport android.os.IBinder\r\nimport androidx.core.app.NotificationCompat\r\nimport com.friendzone.android.R\r\n\r\nclass LocationForegroundService : Service() {\r\n\r\n    override fun onCreate() {\r\n        super.onCreate()\r\n        startForeground(NOTIFICATION_ID, createNotification())\r\n    }\r\n\r\n    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {\r\n        return START_STICKY\r\n    }\r\n\r\n    override fun onBind(intent: Intent?): IBinder? = null\r\n\r\n    private fun createNotification(): Notification {\r\n        val manager = getSystemService(NotificationManager::class.java)\r\n        val channel = NotificationChannel(\r\n            CHANNEL_ID,\r\n            \"Location tracking\",\r\n            NotificationManager.IMPORTANCE_LOW\r\n        )\r\n        manager.createNotificationChannel(channel)\r\n\r\n        return NotificationCompat.Builder(this, CHANNEL_ID)\r\n            .setContentTitle(\"FriendZone\")\r\n            .setContentText(\"Tracking location for active zones\")\r\n            .setSmallIcon(R.drawable.ic_notification)\r\n            .build()\r\n    }\r\n\r\n    companion object {\r\n        private const val CHANNEL_ID = \"friendzone_location\"\r\n        private const val NOTIFICATION_ID = 1001\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/location/LocationForegroundService.kt b/app/src/main/java/com/friendzone/android/core/location/LocationForegroundService.kt
+--- a/app/src/main/java/com/friendzone/android/core/location/LocationForegroundService.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/location/LocationForegroundService.kt	(date 1778616473448)
+@@ -8,8 +8,22 @@
+ import android.os.IBinder
+ import androidx.core.app.NotificationCompat
+ import com.friendzone.android.R
++import com.friendzone.android.data.local.AppPreferences
++import dagger.hilt.android.AndroidEntryPoint
++import javax.inject.Inject
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.cancel
++import kotlinx.coroutines.flow.first
++import kotlinx.coroutines.launch
+ 
++@AndroidEntryPoint
+ class LocationForegroundService : Service() {
++    @Inject lateinit var locationUploader: LocationUploader
++    @Inject lateinit var prefs: AppPreferences
++
++    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+ 
+     override fun onCreate() {
+         super.onCreate()
+@@ -17,23 +31,33 @@
+     }
+ 
+     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
++        serviceScope.launch {
++            val intervalMillis = (prefs.locationUpdateIntervalMinutes.first().coerceAtLeast(0.1) * 60_000L).toLong()
++            locationUploader.start(serviceScope, intervalMillis)
++        }
+         return START_STICKY
+     }
+ 
+     override fun onBind(intent: Intent?): IBinder? = null
+ 
++    override fun onDestroy() {
++        locationUploader.stop()
++        serviceScope.cancel()
++        super.onDestroy()
++    }
++
+     private fun createNotification(): Notification {
+         val manager = getSystemService(NotificationManager::class.java)
+         val channel = NotificationChannel(
+             CHANNEL_ID,
+-            "Location tracking",
++            "Отслеживание геолокации",
+             NotificationManager.IMPORTANCE_LOW
+         )
+         manager.createNotificationChannel(channel)
+ 
+         return NotificationCompat.Builder(this, CHANNEL_ID)
+             .setContentTitle("FriendZone")
+-            .setContentText("Tracking location for active zones")
++            .setContentText("Отслеживание геолокации для активных зон")
+             .setSmallIcon(R.drawable.ic_notification)
+             .build()
+     }
+Index: app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.data.repository\r\n\r\nimport com.friendzone.android.data.local.AppPreferences\r\nimport com.friendzone.android.data.local.LocalFriendDto\r\nimport com.friendzone.android.data.local.LocalInvitationDto\r\nimport java.util.UUID\r\n\r\nclass FriendsRepository(\r\n    private val prefs: AppPreferences\r\n) {\r\n    suspend fun listFriends(): List<LocalFriendDto> {\r\n        return prefs.getLocalFriends()\r\n    }\r\n\r\n    suspend fun addFriend(tag: String): LocalFriendDto {\r\n        val normalizedTag = normalizeTag(tag)\r\n        val existing = prefs.getLocalFriends().firstOrNull { it.tag.equals(normalizedTag, ignoreCase = true) }\r\n        if (existing != null) {\r\n            return existing\r\n        }\r\n\r\n        val friend = LocalFriendDto(\r\n            id = UUID.randomUUID().toString(),\r\n            tag = normalizedTag,\r\n            displayName = normalizedTag.removePrefix(\"@\")\r\n        )\r\n        prefs.saveLocalFriends(prefs.getLocalFriends() + friend)\r\n        return friend\r\n    }\r\n\r\n    suspend fun renameFriend(friendId: String, displayName: String) {\r\n        val updated = prefs.getLocalFriends().map { friend ->\r\n            if (friend.id == friendId) friend.copy(displayName = displayName.trim()) else friend\r\n        }\r\n        prefs.saveLocalFriends(updated)\r\n    }\r\n\r\n    suspend fun listInvitations(): List<LocalInvitationDto> {\r\n        return prefs.getLocalInvitations()\r\n    }\r\n\r\n    suspend fun sendInvitation(tag: String): LocalInvitationDto {\r\n        val normalizedTag = normalizeTag(tag)\r\n        val invitations = prefs.getLocalInvitations()\r\n        val existing = invitations.firstOrNull {\r\n            !it.isIncoming && it.tag.equals(normalizedTag, ignoreCase = true)\r\n        }\r\n        if (existing != null) {\r\n            return existing\r\n        }\r\n\r\n        val invitation = LocalInvitationDto(\r\n            id = UUID.randomUUID().toString(),\r\n            tag = normalizedTag,\r\n            displayName = normalizedTag.removePrefix(\"@\"),\r\n            isIncoming = false\r\n        )\r\n        prefs.saveLocalInvitations(invitations + invitation)\r\n        return invitation\r\n    }\r\n\r\n    private fun normalizeTag(tag: String): String {\r\n        val compact = tag.trim().removePrefix(\"@\").replace(\" \", \"\")\r\n        return \"@$compact\"\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt b/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt
+--- a/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt	(date 1778610327886)
+@@ -4,10 +4,13 @@
+ import com.friendzone.android.data.local.LocalFriendDto
+ import com.friendzone.android.data.local.LocalInvitationDto
+ import java.util.UUID
++import kotlinx.coroutines.flow.Flow
+ 
+ class FriendsRepository(
+     private val prefs: AppPreferences
+ ) {
++    fun observeFriends(): Flow<List<LocalFriendDto>> = prefs.localFriends
++
+     suspend fun listFriends(): List<LocalFriendDto> {
+         return prefs.getLocalFriends()
+     }
+@@ -34,6 +37,28 @@
+         }
+         prefs.saveLocalFriends(updated)
+     }
++
++    suspend fun updateFriendLocation(
++        friendId: String,
++        latitude: Double?,
++        longitude: Double?,
++        accuracy: Double? = null,
++        deviceTimeIso: String? = null
++    ) {
++        val updated = prefs.getLocalFriends().map { friend ->
++            if (friend.id == friendId) {
++                friend.copy(
++                    latitude = latitude,
++                    longitude = longitude,
++                    accuracy = accuracy,
++                    locationUpdatedAtIso = if (latitude != null && longitude != null) deviceTimeIso else null
++                )
++            } else {
++                friend
++            }
++        }
++        prefs.saveLocalFriends(updated)
++    }
+ 
+     suspend fun listInvitations(): List<LocalInvitationDto> {
+         return prefs.getLocalInvitations()
+Index: app/src/main/java/com/friendzone/android/core/work/WorkScheduler.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.work\r\n\r\nimport android.content.Context\r\nimport androidx.work.Constraints\r\nimport androidx.work.ExistingPeriodicWorkPolicy\r\nimport androidx.work.NetworkType\r\nimport androidx.work.PeriodicWorkRequestBuilder\r\nimport androidx.work.WorkManager\r\nimport java.util.concurrent.TimeUnit\r\n\r\nobject WorkScheduler {\r\n    fun scheduleLocationUploads(context: Context) {\r\n        val constraints = Constraints.Builder()\r\n            .setRequiredNetworkType(NetworkType.CONNECTED)\r\n            .build()\r\n\r\n        val request = PeriodicWorkRequestBuilder<LocationUploadWorker>(15, TimeUnit.MINUTES)\r\n            .setConstraints(constraints)\r\n            .build()\r\n\r\n        WorkManager.getInstance(context).enqueueUniquePeriodicWork(\r\n            \"friendzone_location_upload\",\r\n            ExistingPeriodicWorkPolicy.UPDATE,\r\n            request\r\n        )\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/work/WorkScheduler.kt b/app/src/main/java/com/friendzone/android/core/work/WorkScheduler.kt
+--- a/app/src/main/java/com/friendzone/android/core/work/WorkScheduler.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/work/WorkScheduler.kt	(date 1778616473448)
+@@ -9,12 +9,15 @@
+ import java.util.concurrent.TimeUnit
+ 
+ object WorkScheduler {
+-    fun scheduleLocationUploads(context: Context) {
++    fun scheduleLocationUploads(context: Context, intervalMinutes: Double) {
+         val constraints = Constraints.Builder()
+             .setRequiredNetworkType(NetworkType.CONNECTED)
+             .build()
+ 
+-        val request = PeriodicWorkRequestBuilder<LocationUploadWorker>(15, TimeUnit.MINUTES)
++        val request = PeriodicWorkRequestBuilder<LocationUploadWorker>(
++            kotlin.math.ceil(intervalMinutes.coerceAtLeast(15.0)).toLong(),
++            TimeUnit.MINUTES
++        )
+             .setConstraints(constraints)
+             .build()
+ 
+Index: app/src/main/java/com/friendzone/android/core/location/LocationUploader.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.location\r\n\r\nimport com.friendzone.android.data.repository.LocationRepository\r\nimport com.friendzone.android.data.remote.dto.LocationSampleDto\r\nimport com.friendzone.android.core.notifications.Notifier\r\nimport kotlinx.coroutines.CoroutineScope\r\nimport kotlinx.coroutines.Dispatchers\r\nimport kotlinx.coroutines.Job\r\nimport kotlinx.coroutines.flow.collectLatest\r\nimport kotlinx.coroutines.launch\r\n\r\nclass LocationUploader(\r\n    private val locationProvider: LocationProvider,\r\n    private val repository: LocationRepository,\r\n    private val notifier: Notifier\r\n) {\r\n    private var job: Job? = null\r\n\r\n    fun start(scope: CoroutineScope) {\r\n        job?.cancel()\r\n        job = scope.launch(Dispatchers.IO) {\r\n            locationProvider.locationUpdates().collectLatest { sample ->\r\n                runCatching {\r\n                    repository.sendBatch(\r\n                        listOf(\r\n                            LocationSampleDto(\r\n                                lat = sample.lat,\r\n                                lon = sample.lon,\r\n                                accuracy = sample.accuracy,\r\n                                deviceTime = sample.deviceTimeIso\r\n                            )\r\n                        )\r\n                    )\r\n                }.onSuccess { events ->\r\n                    events.forEach { event ->\r\n                        val title = \"${event.type} ${event.zoneName}\"\r\n                        val body = event.eventTime ?: \"Zone event\"\r\n                        notifier.showEventNotification(title, body)\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n\r\n    fun stop() {\r\n        job?.cancel()\r\n        job = null\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/location/LocationUploader.kt b/app/src/main/java/com/friendzone/android/core/location/LocationUploader.kt
+--- a/app/src/main/java/com/friendzone/android/core/location/LocationUploader.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/location/LocationUploader.kt	(date 1778615617290)
+@@ -16,26 +16,28 @@
+ ) {
+     private var job: Job? = null
+ 
+-    fun start(scope: CoroutineScope) {
++    fun start(scope: CoroutineScope, intervalMillis: Long) {
+         job?.cancel()
+         job = scope.launch(Dispatchers.IO) {
+-            locationProvider.locationUpdates().collectLatest { sample ->
+-                runCatching {
+-                    repository.sendBatch(
+-                        listOf(
+-                            LocationSampleDto(
+-                                lat = sample.lat,
+-                                lon = sample.lon,
+-                                accuracy = sample.accuracy,
+-                                deviceTime = sample.deviceTimeIso
+-                            )
+-                        )
+-                    )
+-                }.onSuccess { events ->
+-                    events.forEach { event ->
+-                        val title = "${event.type} ${event.zoneName}"
+-                        val body = event.eventTime ?: "Zone event"
+-                        notifier.showEventNotification(title, body)
++            runCatching {
++                locationProvider.locationUpdates(intervalMillis).collectLatest { sample ->
++                    runCatching {
++                        repository.sendBatch(
++                            listOf(
++                                LocationSampleDto(
++                                    lat = sample.lat,
++                                    lon = sample.lon,
++                                    accuracy = sample.accuracy,
++                                    deviceTime = sample.deviceTimeIso
++                                )
++                            )
++                        )
++                    }.onSuccess { events ->
++                        events.forEach { event ->
++                            val title = "${event.type} ${event.zoneName}"
++                            val body = event.eventTime ?: "Zone event"
++                            notifier.showEventNotification(title, body)
++                        }
+                     }
+                 }
+             }
+Index: app/src/main/java/com/friendzone/android/core/location/LocationProvider.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.location\r\n\r\nimport kotlinx.coroutines.flow.Flow\r\n\r\ndata class LocationSample(\r\n    val lat: Double,\r\n    val lon: Double,\r\n    val accuracy: Double,\r\n    val deviceTimeIso: String\r\n)\r\n\r\ninterface LocationProvider {\r\n    fun locationUpdates(): Flow<LocationSample>\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/location/LocationProvider.kt b/app/src/main/java/com/friendzone/android/core/location/LocationProvider.kt
+--- a/app/src/main/java/com/friendzone/android/core/location/LocationProvider.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/location/LocationProvider.kt	(date 1778610327886)
+@@ -10,7 +10,7 @@
+ )
+ 
+ interface LocationProvider {
+-    fun locationUpdates(): Flow<LocationSample>
++    fun locationUpdates(intervalMillis: Long): Flow<LocationSample>
+ }
+ 
+ 
+Index: app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.presentation.map\r\n\r\nimport androidx.lifecycle.ViewModel\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.friendzone.android.data.local.AppPreferences\r\nimport com.friendzone.android.data.repository.FriendsRepository\r\nimport com.friendzone.android.data.repository.PlaceSearchRepository\r\nimport com.friendzone.android.data.repository.ZoneRepository\r\nimport com.friendzone.android.presentation.zones.FriendOptionUi\r\nimport com.friendzone.android.presentation.zones.ZoneUi\r\nimport dagger.hilt.android.lifecycle.HiltViewModel\r\nimport javax.inject.Inject\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.StateFlow\r\nimport kotlinx.coroutines.flow.first\r\nimport kotlinx.coroutines.launch\r\n\r\ndata class MapFocusTarget(\r\n    val latitude: Double,\r\n    val longitude: Double,\r\n    val zoom: Double = 15.0,\r\n    val requestId: Long = System.currentTimeMillis()\r\n)\r\n\r\ndata class MapScreenState(\r\n    val isLoading: Boolean = false,\r\n    val zones: List<ZoneUi> = emptyList(),\r\n    val friends: List<FriendOptionUi> = emptyList(),\r\n    val showInactiveZones: Boolean = true,\r\n    val createDialogVisible: Boolean = false,\r\n    val selectedZoneId: String? = null,\r\n    val message: String? = null,\r\n    val focusTarget: MapFocusTarget? = null,\r\n    val maxRadiusMeters: Int = 2000\r\n)\r\n\r\n@HiltViewModel\r\nclass MapViewModel @Inject constructor(\r\n    private val zoneRepository: ZoneRepository,\r\n    private val placeSearchRepository: PlaceSearchRepository,\r\n    private val prefs: AppPreferences,\r\n    private val friendsRepository: FriendsRepository\r\n) : ViewModel() {\r\n    private val _state = MutableStateFlow(MapScreenState())\r\n    val state: StateFlow<MapScreenState> = _state\r\n\r\n    private var currentCenterLatitude: Double = 55.751244\r\n    private var currentCenterLongitude: Double = 37.618423\r\n\r\n    fun loadZones() {\r\n        viewModelScope.launch {\r\n            _state.value = _state.value.copy(isLoading = true)\r\n            runCatching {\r\n                Triple(\r\n                    zoneRepository.listZones(),\r\n                    friendsRepository.listFriends(),\r\n                    prefs.maxRadius.first()\r\n                )\r\n            }.onSuccess { (zones, friends, maxRadius) ->\r\n                _state.value = _state.value.copy(\r\n                    isLoading = false,\r\n                    zones = zones.map { it.toUi() },\r\n                    friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },\r\n                    maxRadiusMeters = maxRadius\r\n                )\r\n            }.onFailure { error ->\r\n                _state.value = _state.value.copy(\r\n                    isLoading = false,\r\n                    message = error.message ?: \"Не удалось загрузить зоны\"\r\n                )\r\n            }\r\n        }\r\n    }\r\n\r\n    fun updateMapCenter(latitude: Double, longitude: Double) {\r\n        currentCenterLatitude = latitude\r\n        currentCenterLongitude = longitude\r\n    }\r\n\r\n    fun requestCreateDialog() {\r\n        viewModelScope.launch {\r\n            _state.value = _state.value.copy(\r\n                createDialogVisible = true,\r\n                selectedZoneId = null,\r\n                maxRadiusMeters = prefs.maxRadius.first(),\r\n                friends = friendsRepository.listFriends().map {\r\n                    FriendOptionUi(it.id, it.tag, it.displayName)\r\n                }\r\n            )\r\n        }\r\n    }\r\n\r\n    fun dismissCreateDialog() {\r\n        _state.value = _state.value.copy(createDialogVisible = false)\r\n    }\r\n\r\n    fun selectZone(zoneId: String) {\r\n        viewModelScope.launch {\r\n            _state.value = _state.value.copy(\r\n                selectedZoneId = zoneId,\r\n                maxRadiusMeters = prefs.maxRadius.first(),\r\n                friends = friendsRepository.listFriends().map {\r\n                    FriendOptionUi(it.id, it.tag, it.displayName)\r\n                }\r\n            )\r\n        }\r\n    }\r\n\r\n    fun clearSelectedZone() {\r\n        _state.value = _state.value.copy(selectedZoneId = null)\r\n    }\r\n\r\n    fun setShowInactiveZones(value: Boolean) {\r\n        _state.value = _state.value.copy(showInactiveZones = value)\r\n    }\r\n\r\n    fun createZone(name: String, radiusMeters: Double, detectorFriendIds: List<String>) {\r\n        viewModelScope.launch {\r\n            val normalizedRadius = radiusMeters.coerceIn(50.0, _state.value.maxRadiusMeters.toDouble())\r\n            runCatching {\r\n                zoneRepository.createZone(\r\n                    name = name.ifBlank { \"Новая зона\" },\r\n                    centerLat = currentCenterLatitude,\r\n                    centerLon = currentCenterLongitude,\r\n                    radiusMeters = normalizedRadius,\r\n                    isActive = true,\r\n                    detectorFriendIds = detectorFriendIds\r\n                )\r\n            }.onSuccess {\r\n                _state.value = _state.value.copy(\r\n                    createDialogVisible = false,\r\n                    message = \"Зона добавлена\"\r\n                )\r\n                loadZones()\r\n            }.onFailure { error ->\r\n                _state.value = _state.value.copy(\r\n                    message = error.message ?: \"Не удалось создать зону\"\r\n                )\r\n            }\r\n        }\r\n    }\r\n\r\n    fun updateZone(zone: ZoneUi) {\r\n        viewModelScope.launch {\r\n            runCatching {\r\n                zoneRepository.updateZone(\r\n                    zoneId = zone.id,\r\n                    name = zone.name,\r\n                    centerLat = zone.centerLat,\r\n                    centerLon = zone.centerLon,\r\n                    radiusMeters = zone.radiusMeters.coerceIn(50.0, _state.value.maxRadiusMeters.toDouble()),\r\n                    isActive = zone.isActive,\r\n                    detectorFriendIds = zone.detectorFriendIds\r\n                )\r\n            }.onSuccess {\r\n                _state.value = _state.value.copy(\r\n                    selectedZoneId = null,\r\n                    message = \"Зона обновлена\"\r\n                )\r\n                loadZones()\r\n            }.onFailure { error ->\r\n                _state.value = _state.value.copy(\r\n                    message = error.message ?: \"Не удалось обновить зону\"\r\n                )\r\n            }\r\n        }\r\n    }\r\n\r\n    fun moveZone(zoneId: String, latitude: Double, longitude: Double) {\r\n        val zone = _state.value.zones.firstOrNull { it.id == zoneId } ?: return\r\n        updateZone(zone.copy(centerLat = latitude, centerLon = longitude))\r\n    }\r\n\r\n    fun deleteZone(zoneId: String) {\r\n        viewModelScope.launch {\r\n            runCatching { zoneRepository.deleteZone(zoneId) }\r\n                .onSuccess {\r\n                    _state.value = _state.value.copy(\r\n                        selectedZoneId = null,\r\n                        message = \"Зона удалена\"\r\n                    )\r\n                    loadZones()\r\n                }\r\n                .onFailure { error ->\r\n                    _state.value = _state.value.copy(\r\n                        message = error.message ?: \"Не удалось удалить зону\"\r\n                    )\r\n                }\r\n        }\r\n    }\r\n\r\n    fun searchPlace(query: String) {\r\n        viewModelScope.launch {\r\n            runCatching { placeSearchRepository.search(query) }\r\n                .onSuccess { result ->\r\n                    if (result == null) {\r\n                        _state.value = _state.value.copy(message = \"Место не найдено\")\r\n                    } else {\r\n                        currentCenterLatitude = result.latitude\r\n                        currentCenterLongitude = result.longitude\r\n                        _state.value = _state.value.copy(\r\n                            message = result.address,\r\n                            focusTarget = MapFocusTarget(\r\n                                latitude = result.latitude,\r\n                                longitude = result.longitude\r\n                            )\r\n                        )\r\n                    }\r\n                }\r\n                .onFailure { error ->\r\n                    _state.value = _state.value.copy(\r\n                        message = error.message ?: \"Поиск места недоступен\"\r\n                    )\r\n                }\r\n        }\r\n    }\r\n\r\n    fun clearMessage() {\r\n        _state.value = _state.value.copy(message = null)\r\n    }\r\n\r\n    private fun com.friendzone.android.data.remote.dto.ZoneDto.toUi(): ZoneUi {\r\n        return ZoneUi(\r\n            id = id,\r\n            name = name,\r\n            centerLat = centerLat,\r\n            centerLon = centerLon,\r\n            radiusMeters = radiusMeters,\r\n            isActive = isActive,\r\n            detectorFriendIds = detectorFriendIds\r\n        )\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt b/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt
+--- a/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt	(date 1778616473452)
+@@ -3,7 +3,10 @@
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
+ import com.friendzone.android.data.local.AppPreferences
++import com.friendzone.android.data.local.LocalFriendDto
++import com.friendzone.android.data.local.LocalLocationDto
+ import com.friendzone.android.data.repository.FriendsRepository
++import com.friendzone.android.data.repository.LocationRepository
+ import com.friendzone.android.data.repository.PlaceSearchRepository
+ import com.friendzone.android.data.repository.ZoneRepository
+ import com.friendzone.android.presentation.zones.FriendOptionUi
+@@ -12,8 +15,15 @@
+ import javax.inject.Inject
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.collect
++import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.launch
++import kotlin.math.acos
++import kotlin.math.cos
++import kotlin.math.max
++import kotlin.math.min
++import kotlin.math.sin
+ 
+ data class MapFocusTarget(
+     val latitude: Double,
+@@ -22,22 +32,44 @@
+     val requestId: Long = System.currentTimeMillis()
+ )
+ 
++data class DeviceLocationUi(
++    val latitude: Double,
++    val longitude: Double,
++    val accuracy: Double,
++    val deviceTimeIso: String,
++    val zoneNames: List<String>
++)
++
++data class FriendMapUi(
++    val id: String,
++    val displayName: String,
++    val tag: String,
++    val latitude: Double,
++    val longitude: Double,
++    val zoneNames: List<String>,
++    val locationUpdatedAtIso: String?
++)
++
+ data class MapScreenState(
+     val isLoading: Boolean = false,
+     val zones: List<ZoneUi> = emptyList(),
+     val friends: List<FriendOptionUi> = emptyList(),
++    val friendMarkers: List<FriendMapUi> = emptyList(),
++    val deviceLocation: DeviceLocationUi? = null,
+     val showInactiveZones: Boolean = true,
+     val createDialogVisible: Boolean = false,
+     val selectedZoneId: String? = null,
+     val message: String? = null,
+     val focusTarget: MapFocusTarget? = null,
+-    val maxRadiusMeters: Int = 2000
++    val maxRadiusMeters: Int = 2000,
++    val onlyOwnMarkers: Boolean = true
+ )
+ 
+ @HiltViewModel
+ class MapViewModel @Inject constructor(
+     private val zoneRepository: ZoneRepository,
+     private val placeSearchRepository: PlaceSearchRepository,
++    private val locationRepository: LocationRepository,
+     private val prefs: AppPreferences,
+     private val friendsRepository: FriendsRepository
+ ) : ViewModel() {
+@@ -46,6 +78,11 @@
+ 
+     private var currentCenterLatitude: Double = 55.751244
+     private var currentCenterLongitude: Double = 37.618423
++    private var initialDeviceFocusApplied = false
++
++    init {
++        observeBindings()
++    }
+ 
+     fun loadZones() {
+         viewModelScope.launch {
+@@ -63,6 +100,7 @@
+                     friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
+                     maxRadiusMeters = maxRadius
+                 )
++                applyDerivedMarkers()
+             }.onFailure { error ->
+                 _state.value = _state.value.copy(
+                     isLoading = false,
+@@ -129,7 +167,7 @@
+             }.onSuccess {
+                 _state.value = _state.value.copy(
+                     createDialogVisible = false,
+-                    message = "Зона добавлена"
++                    message = "Зона создана"
+                 )
+                 loadZones()
+             }.onFailure { error ->
+@@ -200,16 +238,13 @@
+                         currentCenterLongitude = result.longitude
+                         _state.value = _state.value.copy(
+                             message = result.address,
+-                            focusTarget = MapFocusTarget(
+-                                latitude = result.latitude,
+-                                longitude = result.longitude
+-                            )
++                            focusTarget = MapFocusTarget(result.latitude, result.longitude)
+                         )
+                     }
+                 }
+                 .onFailure { error ->
+                     _state.value = _state.value.copy(
+-                        message = error.message ?: "Поиск места недоступен"
++                        message = error.message ?: "Поиск недоступен"
+                     )
+                 }
+         }
+@@ -219,6 +254,109 @@
+         _state.value = _state.value.copy(message = null)
+     }
+ 
++    private fun observeBindings() {
++        viewModelScope.launch {
++            combine(
++                locationRepository.currentDeviceLocation,
++                friendsRepository.observeFriends(),
++                prefs.onlyOwnMarkers
++            ) { deviceLocation, friends, onlyOwnMarkers ->
++                Triple(deviceLocation, friends, onlyOwnMarkers)
++            }.collect { (deviceLocation, friends, onlyOwnMarkers) ->
++                _state.value = _state.value.copy(
++                    friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
++                    onlyOwnMarkers = onlyOwnMarkers
++                )
++                applyDerivedMarkers(deviceLocation, friends, onlyOwnMarkers)
++            }
++        }
++    }
++
++    private fun applyDerivedMarkers(
++        deviceLocation: LocalLocationDto? = null,
++        friends: List<LocalFriendDto> = emptyList(),
++        onlyOwnMarkers: Boolean = _state.value.onlyOwnMarkers
++    ) {
++        val actualDeviceLocation = deviceLocation ?: _state.value.deviceLocation?.let {
++            LocalLocationDto(it.latitude, it.longitude, it.accuracy, it.deviceTimeIso)
++        }
++        val actualFriends = if (friends.isEmpty()) {
++            _state.value.friendMarkers.map {
++                LocalFriendDto(
++                    id = it.id,
++                    tag = it.tag,
++                    displayName = it.displayName,
++                    latitude = it.latitude,
++                    longitude = it.longitude,
++                    locationUpdatedAtIso = it.locationUpdatedAtIso
++                )
++            }
++        } else {
++            friends
++        }
++
++        val deviceUi = actualDeviceLocation?.toUi(_state.value.zones)
++        val friendMarkers = if (onlyOwnMarkers) {
++            emptyList()
++        } else {
++            actualFriends.mapNotNull { it.toMapUi(_state.value.zones) }
++        }
++
++        _state.value = _state.value.copy(
++            deviceLocation = deviceUi,
++            friendMarkers = friendMarkers
++        )
++
++        if (deviceUi != null && !initialDeviceFocusApplied && _state.value.focusTarget == null) {
++            currentCenterLatitude = deviceUi.latitude
++            currentCenterLongitude = deviceUi.longitude
++            initialDeviceFocusApplied = true
++            _state.value = _state.value.copy(
++                focusTarget = MapFocusTarget(deviceUi.latitude, deviceUi.longitude, 16.0)
++            )
++        }
++    }
++
++    private fun LocalLocationDto.toUi(zones: List<ZoneUi>): DeviceLocationUi {
++        return DeviceLocationUi(
++            latitude = latitude,
++            longitude = longitude,
++            accuracy = accuracy,
++            deviceTimeIso = deviceTimeIso,
++            zoneNames = zones.filter { it.containsPoint(latitude, longitude) }.map { it.name }
++        )
++    }
++
++    private fun LocalFriendDto.toMapUi(zones: List<ZoneUi>): FriendMapUi? {
++        val lat = latitude ?: return null
++        val lon = longitude ?: return null
++        return FriendMapUi(
++            id = id,
++            displayName = displayName,
++            tag = tag,
++            latitude = lat,
++            longitude = lon,
++            zoneNames = zones
++                .filter { zone -> zone.containsPoint(lat, lon) && (zone.detectorFriendIds.isEmpty() || zone.detectorFriendIds.contains(id)) }
++                .map { it.name },
++            locationUpdatedAtIso = locationUpdatedAtIso
++        )
++    }
++
++    private fun ZoneUi.containsPoint(latitude: Double, longitude: Double): Boolean {
++        return distanceMeters(centerLat, centerLon, latitude, longitude) <= radiusMeters
++    }
++
++    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
++        val earthRadius = 6_371_000.0
++        val cosine = (
++            (sin(Math.toRadians(lat1)) * sin(Math.toRadians(lat2))) +
++                (cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * cos(Math.toRadians(lon1 - lon2)))
++            )
++        val angle = acos(min(1.0, max(-1.0, cosine)))
++        return earthRadius * angle
++    }
++
+     private fun com.friendzone.android.data.remote.dto.ZoneDto.toUi(): ZoneUi {
+         return ZoneUi(
+             id = id,
+Index: app/src/main/java/com/friendzone/android/core/work/LocationUploadWorker.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.core.work\r\n\r\nimport android.content.Context\r\nimport androidx.hilt.work.HiltWorker\r\nimport androidx.work.CoroutineWorker\r\nimport androidx.work.WorkerParameters\r\nimport com.friendzone.android.data.repository.LocationRepository\r\nimport com.friendzone.android.core.location.LocationProvider\r\nimport com.friendzone.android.data.remote.dto.LocationSampleDto\r\nimport com.friendzone.android.core.notifications.Notifier\r\nimport dagger.assisted.Assisted\r\nimport dagger.assisted.AssistedInject\r\nimport kotlinx.coroutines.flow.first\r\nimport kotlinx.coroutines.withTimeoutOrNull\r\n\r\n@HiltWorker\r\nclass LocationUploadWorker @AssistedInject constructor(\r\n    @Assisted context: Context,\r\n    @Assisted params: WorkerParameters,\r\n    private val locationProvider: LocationProvider,\r\n    private val locationRepository: LocationRepository,\r\n    private val notifier: Notifier\r\n) : CoroutineWorker(context, params) {\r\n\r\n    override suspend fun doWork(): Result {\r\n        val sample = withTimeoutOrNull(8_000L) { locationProvider.locationUpdates().first() }\r\n            ?: return Result.retry()\r\n\r\n        val events = locationRepository.sendBatch(\r\n            listOf(\r\n                LocationSampleDto(\r\n                    lat = sample.lat,\r\n                    lon = sample.lon,\r\n                    accuracy = sample.accuracy,\r\n                    deviceTime = sample.deviceTimeIso\r\n                )\r\n            )\r\n        )\r\n\r\n        events.forEach { event ->\r\n            val title = \"${event.type} ${event.zoneName}\"\r\n            val body = event.eventTime ?: \"Zone event\"\r\n            notifier.showEventNotification(title, body)\r\n        }\r\n\r\n        return Result.success()\r\n    }\r\n}\r\n\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/core/work/LocationUploadWorker.kt b/app/src/main/java/com/friendzone/android/core/work/LocationUploadWorker.kt
+--- a/app/src/main/java/com/friendzone/android/core/work/LocationUploadWorker.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/core/work/LocationUploadWorker.kt	(date 1778615218655)
+@@ -4,10 +4,10 @@
+ import androidx.hilt.work.HiltWorker
+ import androidx.work.CoroutineWorker
+ import androidx.work.WorkerParameters
+-import com.friendzone.android.data.repository.LocationRepository
+ import com.friendzone.android.core.location.LocationProvider
+-import com.friendzone.android.data.remote.dto.LocationSampleDto
+ import com.friendzone.android.core.notifications.Notifier
++import com.friendzone.android.data.remote.dto.LocationSampleDto
++import com.friendzone.android.data.repository.LocationRepository
+ import dagger.assisted.Assisted
+ import dagger.assisted.AssistedInject
+ import kotlinx.coroutines.flow.first
+@@ -23,7 +23,9 @@
+ ) : CoroutineWorker(context, params) {
+ 
+     override suspend fun doWork(): Result {
+-        val sample = withTimeoutOrNull(8_000L) { locationProvider.locationUpdates().first() }
++        val sample = withTimeoutOrNull(8_000L) {
++            locationProvider.locationUpdates(5_000L).first()
++        }
+             ?: return Result.retry()
+ 
+         val events = locationRepository.sendBatch(
+Index: app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.friendzone.android.data.local\r\n\r\ndata class LocalFriendDto(\r\n    val id: String,\r\n    val tag: String,\r\n    val displayName: String\r\n)\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt b/app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt
+--- a/app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt	(revision 5cec80d0dc05de91198921247ea9776b4630ec94)
++++ b/app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt	(date 1778610125940)
+@@ -3,5 +3,9 @@
+ data class LocalFriendDto(
+     val id: String,
+     val tag: String,
+-    val displayName: String
++    val displayName: String,
++    val latitude: Double? = null,
++    val longitude: Double? = null,
++    val accuracy: Double? = null,
++    val locationUpdatedAtIso: String? = null
+ )

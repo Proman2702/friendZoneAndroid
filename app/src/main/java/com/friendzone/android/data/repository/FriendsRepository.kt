@@ -1,91 +1,66 @@
 package com.friendzone.android.data.repository
 
 import com.friendzone.android.data.local.AppPreferences
-import com.friendzone.android.data.local.LocalFriendDto
-import com.friendzone.android.data.local.LocalInvitationDto
-import java.util.UUID
-import kotlinx.coroutines.flow.Flow
+import com.friendzone.android.data.remote.FriendZoneApi
+import com.friendzone.android.data.remote.dto.CreateFriendRequest
+import com.friendzone.android.data.remote.dto.FriendRequestDto
+import com.friendzone.android.data.remote.dto.RemoteUserDto
+import kotlinx.coroutines.flow.first
 
 class FriendsRepository(
+    private val api: FriendZoneApi,
     private val prefs: AppPreferences
 ) {
-    fun observeFriends(): Flow<List<LocalFriendDto>> = prefs.localFriends
-
-    suspend fun listFriends(): List<LocalFriendDto> {
-        return prefs.getLocalFriends()
+    suspend fun listFriends(): List<RemoteUserDto> {
+        ensureLoggedIn()
+        return runCatching { api.getFriends() }
+            .getOrElse { throw it.toReadableException() }
     }
 
-    suspend fun addFriend(tag: String): LocalFriendDto {
-        val normalizedTag = normalizeTag(tag)
-        val existing = prefs.getLocalFriends().firstOrNull { it.tag.equals(normalizedTag, ignoreCase = true) }
-        if (existing != null) {
-            return existing
+    suspend fun removeFriend(friendId: String) {
+        ensureLoggedIn()
+        runCatching { api.removeFriend(friendId) }
+            .getOrElse { throw it.toReadableException() }
+    }
+
+    suspend fun listIncomingInvitations(): List<FriendRequestDto> {
+        ensureLoggedIn()
+        return runCatching { api.getIncomingFriendRequests() }
+            .getOrElse { throw it.toReadableException() }
+    }
+
+    suspend fun listOutgoingInvitations(): List<FriendRequestDto> {
+        ensureLoggedIn()
+        return runCatching { api.getOutgoingFriendRequests() }
+            .getOrElse { throw it.toReadableException() }
+    }
+
+    suspend fun sendInvitation(login: String): FriendRequestDto {
+        ensureLoggedIn()
+        return runCatching {
+            api.sendFriendRequest(CreateFriendRequest(normalizeLogin(login)))
+        }.getOrElse { throw it.toReadableException() }
+    }
+
+    suspend fun acceptInvitation(requestId: String): FriendRequestDto {
+        ensureLoggedIn()
+        return runCatching { api.acceptFriendRequest(requestId) }
+            .getOrElse { throw it.toReadableException() }
+    }
+
+    suspend fun declineInvitation(requestId: String): FriendRequestDto {
+        ensureLoggedIn()
+        return runCatching { api.declineFriendRequest(requestId) }
+            .getOrElse { throw it.toReadableException() }
+    }
+
+    private suspend fun ensureLoggedIn() {
+        if (prefs.accessToken.first().isNullOrBlank()) {
+            error("Login required")
         }
-
-        val friend = LocalFriendDto(
-            id = UUID.randomUUID().toString(),
-            tag = normalizedTag,
-            displayName = normalizedTag.removePrefix("@")
-        )
-        prefs.saveLocalFriends(prefs.getLocalFriends() + friend)
-        return friend
     }
 
-    suspend fun renameFriend(friendId: String, displayName: String) {
-        val updated = prefs.getLocalFriends().map { friend ->
-            if (friend.id == friendId) friend.copy(displayName = displayName.trim()) else friend
-        }
-        prefs.saveLocalFriends(updated)
-    }
-
-    suspend fun updateFriendLocation(
-        friendId: String,
-        latitude: Double?,
-        longitude: Double?,
-        accuracy: Double? = null,
-        deviceTimeIso: String? = null
-    ) {
-        val updated = prefs.getLocalFriends().map { friend ->
-            if (friend.id == friendId) {
-                friend.copy(
-                    latitude = latitude,
-                    longitude = longitude,
-                    accuracy = accuracy,
-                    locationUpdatedAtIso = if (latitude != null && longitude != null) deviceTimeIso else null
-                )
-            } else {
-                friend
-            }
-        }
-        prefs.saveLocalFriends(updated)
-    }
-
-    suspend fun listInvitations(): List<LocalInvitationDto> {
-        return prefs.getLocalInvitations()
-    }
-
-    suspend fun sendInvitation(tag: String): LocalInvitationDto {
-        val normalizedTag = normalizeTag(tag)
-        val invitations = prefs.getLocalInvitations()
-        val existing = invitations.firstOrNull {
-            !it.isIncoming && it.tag.equals(normalizedTag, ignoreCase = true)
-        }
-        if (existing != null) {
-            return existing
-        }
-
-        val invitation = LocalInvitationDto(
-            id = UUID.randomUUID().toString(),
-            tag = normalizedTag,
-            displayName = normalizedTag.removePrefix("@"),
-            isIncoming = false
-        )
-        prefs.saveLocalInvitations(invitations + invitation)
-        return invitation
-    }
-
-    private fun normalizeTag(tag: String): String {
-        val compact = tag.trim().removePrefix("@").replace(" ", "")
-        return "@$compact"
+    private fun normalizeLogin(login: String): String {
+        return login.trim().removePrefix("@")
     }
 }

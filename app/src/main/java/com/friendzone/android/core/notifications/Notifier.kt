@@ -34,7 +34,7 @@ class Notifier(private val context: Context) {
 
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Zone events",
+            "События зон",
             NotificationManager.IMPORTANCE_HIGH
         )
         channel.setSound(alarmSound, attributes)

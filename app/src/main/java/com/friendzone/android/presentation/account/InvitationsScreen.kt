@@ -107,7 +107,7 @@ fun InvitationsScreen(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = InvitationsAccent,
-                            unfocusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = InvitationsAccent.copy(alpha = 0.7f),
                             focusedTextColor = InvitationsText,
                             unfocusedTextColor = InvitationsText,
                             focusedLabelColor = InvitationsAccent,

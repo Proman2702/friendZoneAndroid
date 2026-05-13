@@ -1,7 +1,6 @@
 package com.friendzone.android.presentation.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,35 +81,16 @@ fun SettingsScreen(
                 }
             }
 
+            SettingsFieldCard("Адрес сервера", state.apiBaseUrl, viewModel::updateApiBaseUrl)
+            SettingsFieldCard("Максимум меток", state.maxMarkers, viewModel::updateMaxMarkers)
+            SettingsFieldCard("Максимальный радиус зоны", state.maxRadius, viewModel::updateMaxRadius)
             SettingsFieldCard(
-                label = "IP сервера",
-                value = state.apiBaseUrl,
-                onValueChange = viewModel::updateApiBaseUrl
+                "Обновление геолокации, мин",
+                state.locationUpdateIntervalMinutes,
+                viewModel::updateLocationUpdateIntervalMinutes
             )
-            SettingsFieldCard(
-                label = "Максимальное кол-во меток",
-                value = state.maxMarkers,
-                onValueChange = viewModel::updateMaxMarkers
-            )
-            SettingsFieldCard(
-                label = "Максимальный радиус зоны",
-                value = state.maxRadius,
-                onValueChange = viewModel::updateMaxRadius
-            )
-            SettingsSwitchCard(
-                title = "Выполнять поиск только по своим меткам",
-                checked = state.onlyOwnMarkers,
-                onCheckedChange = viewModel::updateOnlyOwnMarkers
-            )
-            SettingsSwitchCard(
-                title = "Уведомлять о нахождении друга",
-                checked = state.notifyAboutFriend,
-                onCheckedChange = viewModel::updateNotifyAboutFriend
-            )
-
-            SettingsActionCard("Сигнал при пересечении зоны...")
-            SettingsActionCard("Сигнал при пересечении с другом...")
-            SettingsActionCard("О приложении...")
+            SettingsSwitchCard("Показывать только свои метки", state.onlyOwnMarkers, viewModel::updateOnlyOwnMarkers)
+            SettingsSwitchCard("Уведомлять о друге", state.notifyAboutFriend, viewModel::updateNotifyAboutFriend)
         }
     }
 }
@@ -143,7 +123,7 @@ private fun SettingsFieldCard(
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(0.38f),
+                modifier = Modifier.fillMaxWidth(0.4f),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     color = SettingsAccent,
@@ -190,25 +170,5 @@ private fun SettingsSwitchCard(
                 onCheckedChange = onCheckedChange
             )
         }
-    }
-}
-
-@Composable
-private fun SettingsActionCard(
-    title: String
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = SettingsCard)
-    ) {
-        Text(
-            text = title,
-            color = SettingsText,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)
-        )
     }
 }

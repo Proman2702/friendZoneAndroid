@@ -4,10 +4,13 @@ import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.local.LocalFriendDto
 import com.friendzone.android.data.local.LocalInvitationDto
 import java.util.UUID
+import kotlinx.coroutines.flow.Flow
 
 class FriendsRepository(
     private val prefs: AppPreferences
 ) {
+    fun observeFriends(): Flow<List<LocalFriendDto>> = prefs.localFriends
+
     suspend fun listFriends(): List<LocalFriendDto> {
         return prefs.getLocalFriends()
     }
@@ -31,6 +34,28 @@ class FriendsRepository(
     suspend fun renameFriend(friendId: String, displayName: String) {
         val updated = prefs.getLocalFriends().map { friend ->
             if (friend.id == friendId) friend.copy(displayName = displayName.trim()) else friend
+        }
+        prefs.saveLocalFriends(updated)
+    }
+
+    suspend fun updateFriendLocation(
+        friendId: String,
+        latitude: Double?,
+        longitude: Double?,
+        accuracy: Double? = null,
+        deviceTimeIso: String? = null
+    ) {
+        val updated = prefs.getLocalFriends().map { friend ->
+            if (friend.id == friendId) {
+                friend.copy(
+                    latitude = latitude,
+                    longitude = longitude,
+                    accuracy = accuracy,
+                    locationUpdatedAtIso = if (latitude != null && longitude != null) deviceTimeIso else null
+                )
+            } else {
+                friend
+            }
         }
         prefs.saveLocalFriends(updated)
     }

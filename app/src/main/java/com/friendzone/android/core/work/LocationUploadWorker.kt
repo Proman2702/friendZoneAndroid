@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.friendzone.android.data.repository.LocationRepository
 import com.friendzone.android.core.location.LocationProvider
-import com.friendzone.android.data.remote.dto.LocationSampleDto
 import com.friendzone.android.core.notifications.Notifier
+import com.friendzone.android.data.remote.dto.LocationSampleDto
+import com.friendzone.android.data.repository.LocationRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -23,7 +23,9 @@ class LocationUploadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val sample = withTimeoutOrNull(8_000L) { locationProvider.locationUpdates().first() }
+        val sample = withTimeoutOrNull(8_000L) {
+            locationProvider.locationUpdates(5_000L).first()
+        }
             ?: return Result.retry()
 
         val events = locationRepository.sendBatch(

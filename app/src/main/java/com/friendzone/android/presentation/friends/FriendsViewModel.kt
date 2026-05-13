@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.data.repository.FriendsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,10 @@ import kotlinx.coroutines.launch
 data class FriendUi(
     val id: String,
     val displayName: String,
-    val tag: String
+    val tag: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationUpdatedAtIso: String? = null
 )
 
 data class FriendsState(
@@ -29,9 +33,17 @@ class FriendsViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            val friends = repository.listFriends()
             _state.value = _state.value.copy(
-                friends = friends.map { FriendUi(it.id, it.displayName, it.tag) }
+                friends = repository.listFriends().map {
+                    FriendUi(
+                        id = it.id,
+                        displayName = it.displayName,
+                        tag = it.tag,
+                        latitude = it.latitude,
+                        longitude = it.longitude,
+                        locationUpdatedAtIso = it.locationUpdatedAtIso
+                    )
+                }
             )
         }
     }
@@ -43,7 +55,7 @@ class FriendsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             repository.addFriend(tag)
-            _state.value = _state.value.copy(message = "Друг добавлен локально")
+            _state.value = _state.value.copy(message = "Друг добавлен")
             load()
         }
     }
@@ -55,7 +67,38 @@ class FriendsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             repository.renameFriend(friendId, name)
-            _state.value = _state.value.copy(message = "Имя друга обновлено")
+            _state.value = _state.value.copy(message = "Имя обновлено")
+            load()
+        }
+    }
+
+    fun updateFriendLocation(friendId: String, latitude: String, longitude: String) {
+        val lat = latitude.trim()
+        val lon = longitude.trim()
+        if (lat.isBlank() && lon.isBlank()) {
+            viewModelScope.launch {
+                repository.updateFriendLocation(friendId, null, null)
+                _state.value = _state.value.copy(message = "Геолокация друга очищена")
+                load()
+            }
+            return
+        }
+
+        val parsedLat = lat.toDoubleOrNull()
+        val parsedLon = lon.toDoubleOrNull()
+        if (parsedLat == null || parsedLon == null) {
+            _state.value = _state.value.copy(message = "Координаты должны быть числами")
+            return
+        }
+
+        viewModelScope.launch {
+            repository.updateFriendLocation(
+                friendId = friendId,
+                latitude = parsedLat,
+                longitude = parsedLon,
+                deviceTimeIso = Instant.now().toString()
+            )
+            _state.value = _state.value.copy(message = "Геолокация друга сохранена")
             load()
         }
     }

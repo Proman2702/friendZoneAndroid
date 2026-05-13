@@ -10,7 +10,7 @@ data class LocationSample(
 )
 
 interface LocationProvider {
-    fun locationUpdates(): Flow<LocationSample>
+    fun locationUpdates(intervalMillis: Long): Flow<LocationSample>
 }
 
 

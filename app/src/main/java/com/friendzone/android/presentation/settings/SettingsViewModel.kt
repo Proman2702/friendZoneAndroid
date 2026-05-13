@@ -1,13 +1,15 @@
 package com.friendzone.android.presentation.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.friendzone.android.core.location.LocationTrackingManager
 import com.friendzone.android.data.local.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -15,30 +17,28 @@ data class SettingsState(
     val apiBaseUrl: String = "",
     val maxMarkers: String = "20",
     val maxRadius: String = "2000",
+    val locationUpdateIntervalMinutes: String = "1.0",
     val onlyOwnMarkers: Boolean = true,
     val notifyAboutFriend: Boolean = true
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val prefs: AppPreferences
+    private val prefs: AppPreferences,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state
 
     fun load() {
         viewModelScope.launch {
-            val apiBaseUrl = prefs.apiBaseUrl.first()
-            val maxMarkers = prefs.maxMarkers.first()
-            val maxRadius = prefs.maxRadius.first()
-            val onlyOwnMarkers = prefs.onlyOwnMarkers.first()
-            val notifyAboutFriend = prefs.notifyAboutFriend.first()
             _state.value = SettingsState(
-                apiBaseUrl = apiBaseUrl,
-                maxMarkers = maxMarkers.toString(),
-                maxRadius = maxRadius.toString(),
-                onlyOwnMarkers = onlyOwnMarkers,
-                notifyAboutFriend = notifyAboutFriend
+                apiBaseUrl = prefs.apiBaseUrl.first(),
+                maxMarkers = prefs.maxMarkers.first().toString(),
+                maxRadius = prefs.maxRadius.first().toString(),
+                locationUpdateIntervalMinutes = prefs.locationUpdateIntervalMinutes.first().toString(),
+                onlyOwnMarkers = prefs.onlyOwnMarkers.first(),
+                notifyAboutFriend = prefs.notifyAboutFriend.first()
             )
         }
     }
@@ -48,11 +48,31 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateMaxMarkers(value: String) {
-        _state.value = _state.value.copy(maxMarkers = value.filter { it.isDigit() })
+        _state.value = _state.value.copy(maxMarkers = value.filter(Char::isDigit))
     }
 
     fun updateMaxRadius(value: String) {
-        _state.value = _state.value.copy(maxRadius = value.filter { it.isDigit() })
+        _state.value = _state.value.copy(maxRadius = value.filter(Char::isDigit))
+    }
+
+    fun updateLocationUpdateIntervalMinutes(value: String) {
+        val normalized = buildString {
+            var dotSeen = false
+            value.forEach { char ->
+                when {
+                    char.isDigit() -> append(char)
+                    char == '.' && !dotSeen -> {
+                        append(char)
+                        dotSeen = true
+                    }
+                    char == ',' && !dotSeen -> {
+                        append('.')
+                        dotSeen = true
+                    }
+                }
+            }
+        }
+        _state.value = _state.value.copy(locationUpdateIntervalMinutes = normalized)
     }
 
     fun updateOnlyOwnMarkers(value: Boolean) {
@@ -72,14 +92,22 @@ class SettingsViewModel @Inject constructor(
                 "http://$trimmed"
             }
             val normalized = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
+            val locationIntervalMinutes =
+                _state.value.locationUpdateIntervalMinutes.toDoubleOrNull()?.coerceAtLeast(0.1) ?: 1.0
+
             prefs.setApiBaseUrl(normalized)
             prefs.saveMapSettings(
                 maxMarkers = _state.value.maxMarkers.toIntOrNull()?.coerceAtLeast(1) ?: 20,
                 maxRadius = _state.value.maxRadius.toIntOrNull()?.coerceAtLeast(50) ?: 2000,
+                locationUpdateIntervalMinutes = locationIntervalMinutes,
                 onlyOwnMarkers = _state.value.onlyOwnMarkers,
                 notifyAboutFriend = _state.value.notifyAboutFriend
             )
-            _state.value = _state.value.copy(apiBaseUrl = normalized)
+            LocationTrackingManager.restart(appContext, locationIntervalMinutes)
+            _state.value = _state.value.copy(
+                apiBaseUrl = normalized,
+                locationUpdateIntervalMinutes = locationIntervalMinutes.toString()
+            )
         }
     }
 }

@@ -8,7 +8,7 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val notifier = Notifier(context)
         val title = intent.getStringExtra("title") ?: "FriendZone"
-        val body = intent.getStringExtra("body") ?: "Zone event"
+        val body = intent.getStringExtra("body") ?: "Событие зоны"
         notifier.showEventNotification(title, body)
     }
 }

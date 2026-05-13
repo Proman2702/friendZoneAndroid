@@ -9,12 +9,15 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 object WorkScheduler {
-    fun scheduleLocationUploads(context: Context) {
+    fun scheduleLocationUploads(context: Context, intervalMinutes: Double) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<LocationUploadWorker>(15, TimeUnit.MINUTES)
+        val request = PeriodicWorkRequestBuilder<LocationUploadWorker>(
+            kotlin.math.ceil(intervalMinutes.coerceAtLeast(15.0)).toLong(),
+            TimeUnit.MINUTES
+        )
             .setConstraints(constraints)
             .build()
 

@@ -16,26 +16,28 @@ class LocationUploader(
 ) {
     private var job: Job? = null
 
-    fun start(scope: CoroutineScope) {
+    fun start(scope: CoroutineScope, intervalMillis: Long) {
         job?.cancel()
         job = scope.launch(Dispatchers.IO) {
-            locationProvider.locationUpdates().collectLatest { sample ->
-                runCatching {
-                    repository.sendBatch(
-                        listOf(
-                            LocationSampleDto(
-                                lat = sample.lat,
-                                lon = sample.lon,
-                                accuracy = sample.accuracy,
-                                deviceTime = sample.deviceTimeIso
+            runCatching {
+                locationProvider.locationUpdates(intervalMillis).collectLatest { sample ->
+                    runCatching {
+                        repository.sendBatch(
+                            listOf(
+                                LocationSampleDto(
+                                    lat = sample.lat,
+                                    lon = sample.lon,
+                                    accuracy = sample.accuracy,
+                                    deviceTime = sample.deviceTimeIso
+                                )
                             )
                         )
-                    )
-                }.onSuccess { events ->
-                    events.forEach { event ->
-                        val title = "${event.type} ${event.zoneName}"
-                        val body = event.eventTime ?: "Zone event"
-                        notifier.showEventNotification(title, body)
+                    }.onSuccess { events ->
+                        events.forEach { event ->
+                            val title = "${event.type} ${event.zoneName}"
+                            val body = event.eventTime ?: "Zone event"
+                            notifier.showEventNotification(title, body)
+                        }
                     }
                 }
             }

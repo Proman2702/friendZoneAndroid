@@ -26,8 +26,11 @@ class AppPreferences(private val context: Context) {
     private val localZonesKey = stringPreferencesKey("local_zones_json")
     private val localFriendsKey = stringPreferencesKey("local_friends_json")
     private val localInvitationsKey = stringPreferencesKey("local_invitations_json")
+    private val currentDeviceLocationKey = stringPreferencesKey("current_device_location_json")
     private val maxMarkersKey = intPreferencesKey("max_markers")
     private val maxRadiusKey = intPreferencesKey("max_radius")
+    private val legacyLocationUpdateIntervalMinutesKey = intPreferencesKey("location_update_interval_minutes")
+    private val locationUpdateIntervalMinutesKey = stringPreferencesKey("location_update_interval_minutes_decimal")
     private val onlyOwnMarkersKey = booleanPreferencesKey("only_own_markers")
     private val notifyAboutFriendKey = booleanPreferencesKey("notify_about_friend")
 
@@ -37,8 +40,18 @@ class AppPreferences(private val context: Context) {
     val userName: Flow<String?> = context.dataStore.data.map { it[userNameKey] }
     val userEmail: Flow<String?> = context.dataStore.data.map { it[userEmailKey] }
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[isLoggedInKey] ?: false }
+    val currentDeviceLocation: Flow<LocalLocationDto?> =
+        context.dataStore.data.map { parseDeviceLocation(it[currentDeviceLocationKey]) }
+    val localFriends: Flow<List<LocalFriendDto>> =
+        context.dataStore.data.map { parseFriends(it[localFriendsKey] ?: "[]") }
     val maxMarkers: Flow<Int> = context.dataStore.data.map { it[maxMarkersKey] ?: 20 }
     val maxRadius: Flow<Int> = context.dataStore.data.map { it[maxRadiusKey] ?: 2000 }
+    val locationUpdateIntervalMinutes: Flow<Double> =
+        context.dataStore.data.map { prefs ->
+            prefs[locationUpdateIntervalMinutesKey]?.toDoubleOrNull()
+                ?: prefs[legacyLocationUpdateIntervalMinutesKey]?.toDouble()
+                ?: 1.0
+        }
     val onlyOwnMarkers: Flow<Boolean> = context.dataStore.data.map { it[onlyOwnMarkersKey] ?: true }
     val notifyAboutFriend: Flow<Boolean> = context.dataStore.data.map { it[notifyAboutFriendKey] ?: true }
 
@@ -68,14 +81,28 @@ class AppPreferences(private val context: Context) {
     suspend fun saveMapSettings(
         maxMarkers: Int,
         maxRadius: Int,
+        locationUpdateIntervalMinutes: Double,
         onlyOwnMarkers: Boolean,
         notifyAboutFriend: Boolean
     ) {
         context.dataStore.edit {
             it[maxMarkersKey] = maxMarkers
             it[maxRadiusKey] = maxRadius
+            it[locationUpdateIntervalMinutesKey] = locationUpdateIntervalMinutes.toString()
+            it.remove(legacyLocationUpdateIntervalMinutesKey)
             it[onlyOwnMarkersKey] = onlyOwnMarkers
             it[notifyAboutFriendKey] = notifyAboutFriend
+        }
+    }
+
+    suspend fun saveCurrentDeviceLocation(location: LocalLocationDto) {
+        context.dataStore.edit {
+            it[currentDeviceLocationKey] = JSONObject().apply {
+                put("latitude", location.latitude)
+                put("longitude", location.longitude)
+                put("accuracy", location.accuracy)
+                put("deviceTimeIso", location.deviceTimeIso)
+            }.toString()
         }
     }
 
@@ -118,6 +145,10 @@ class AppPreferences(private val context: Context) {
                             put("id", friend.id)
                             put("tag", friend.tag)
                             put("displayName", friend.displayName)
+                            put("latitude", friend.latitude)
+                            put("longitude", friend.longitude)
+                            put("accuracy", friend.accuracy)
+                            put("locationUpdatedAtIso", friend.locationUpdatedAtIso)
                         }
                     )
                 }
@@ -187,12 +218,30 @@ class AppPreferences(private val context: Context) {
                         LocalFriendDto(
                             id = item.optString("id"),
                             tag = item.optString("tag"),
-                            displayName = item.optString("displayName")
+                            displayName = item.optString("displayName"),
+                            latitude = item.optNullableDouble("latitude"),
+                            longitude = item.optNullableDouble("longitude"),
+                            accuracy = item.optNullableDouble("accuracy"),
+                            locationUpdatedAtIso = item.optString("locationUpdatedAtIso")
+                                .takeIf { value -> value.isNotBlank() && value != "null" }
                         )
                     )
                 }
             }
         }.getOrDefault(emptyList())
+    }
+
+    private fun parseDeviceLocation(raw: String?): LocalLocationDto? {
+        if (raw.isNullOrBlank()) return null
+        return runCatching {
+            val json = JSONObject(raw)
+            LocalLocationDto(
+                latitude = json.getDouble("latitude"),
+                longitude = json.getDouble("longitude"),
+                accuracy = json.optDouble("accuracy", 0.0),
+                deviceTimeIso = json.optString("deviceTimeIso")
+            )
+        }.getOrNull()
     }
 
     private fun parseInvitations(raw: String): List<LocalInvitationDto> {
@@ -212,5 +261,9 @@ class AppPreferences(private val context: Context) {
                 }
             }
         }.getOrDefault(emptyList())
+    }
+
+    private fun JSONObject.optNullableDouble(key: String): Double? {
+        return if (isNull(key) || !has(key)) null else optDouble(key)
     }
 }

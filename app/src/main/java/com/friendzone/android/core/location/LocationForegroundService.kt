@@ -8,8 +8,22 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.friendzone.android.R
+import com.friendzone.android.data.local.AppPreferences
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class LocationForegroundService : Service() {
+    @Inject lateinit var locationUploader: LocationUploader
+    @Inject lateinit var prefs: AppPreferences
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
@@ -17,23 +31,33 @@ class LocationForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        serviceScope.launch {
+            val intervalMillis = (prefs.locationUpdateIntervalMinutes.first().coerceAtLeast(0.1) * 60_000L).toLong()
+            locationUploader.start(serviceScope, intervalMillis)
+        }
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onDestroy() {
+        locationUploader.stop()
+        serviceScope.cancel()
+        super.onDestroy()
+    }
+
     private fun createNotification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Location tracking",
+            "Отслеживание геолокации",
             NotificationManager.IMPORTANCE_LOW
         )
         manager.createNotificationChannel(channel)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("FriendZone")
-            .setContentText("Tracking location for active zones")
+            .setContentText("Отслеживание геолокации для активных зон")
             .setSmallIcon(R.drawable.ic_notification)
             .build()
     }

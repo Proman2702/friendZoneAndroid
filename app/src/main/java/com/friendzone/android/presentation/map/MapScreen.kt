@@ -44,7 +44,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.friendzone.android.R
 import com.friendzone.android.presentation.theme.AppBackground
 import com.friendzone.android.presentation.zones.ZoneEditorDialog
 import com.friendzone.android.presentation.zones.ZoneUi
@@ -56,8 +58,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 private val MapChromeColor = Color(0xFF120D33)
 
@@ -87,6 +87,8 @@ fun MapScreen(
             FriendZoneMap(
                 modifier = Modifier.fillMaxSize(),
                 zones = visibleZones,
+                deviceLocation = state.deviceLocation,
+                friendMarkers = state.friendMarkers,
                 focusTarget = state.focusTarget,
                 appliedFocusRequestId = appliedFocusRequestId,
                 onFocusApplied = { appliedFocusRequestId = it },
@@ -138,6 +140,10 @@ fun MapScreen(
                     onOpenSettings = onOpenSettings
                 )
 
+                if (state.deviceLocation != null || state.friendMarkers.isNotEmpty()) {
+                    BindingSummaryCard(state = state)
+                }
+
                 if (state.isLoading) {
                     Card(
                         modifier = Modifier.padding(top = 12.dp),
@@ -151,7 +157,7 @@ fun MapScreen(
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
                             Text(
-                                text = "Загружаем локальные зоны",
+                                text = "Загружаем зоны",
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(start = 12.dp)
                             )
@@ -181,7 +187,7 @@ fun MapScreen(
     if (state.createDialogVisible) {
         ZoneEditorDialog(
             title = "Новая зона",
-            confirmText = "Добавить",
+            confirmText = "Создать",
             initialName = "",
             initialRadius = "300",
             initialIsActive = true,
@@ -222,6 +228,45 @@ fun MapScreen(
 }
 
 @Composable
+private fun BindingSummaryCard(state: MapScreenState) {
+    val deviceZoneText = state.deviceLocation?.zoneNames
+        ?.takeIf { it.isNotEmpty() }
+        ?.joinToString()
+    val friendCount = state.friendMarkers.size
+    val friendText = if (!state.onlyOwnMarkers && friendCount > 0) {
+        "  •  Друзей на карте: $friendCount"
+    } else {
+        ""
+    }
+
+    Card(
+        modifier = Modifier.padding(top = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            deviceZoneText?.let { zoneText ->
+                Text(
+                    text = "Вы в зоне: $zoneText$friendText",
+                    color = Color(0xFF1B153F),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } ?: Text(
+                text = if (state.onlyOwnMarkers || friendCount == 0) {
+                    "Геопозиция активна"
+                } else {
+                    "Геопозиция активна  •  Друзей на карте: $friendCount"
+                },
+                color = Color(0xFF1B153F),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
 private fun SearchPanel(
     query: String,
     onQueryChange: (String) -> Unit,
@@ -236,7 +281,7 @@ private fun SearchPanel(
         placeholder = { Text("Поиск места") },
         leadingIcon = {
             IconButton(onClick = onSearch) {
-                Icon(Icons.Default.Search, contentDescription = "Искать место")
+                Icon(Icons.Default.Search, contentDescription = "Поиск места")
             }
         },
         trailingIcon = {
@@ -263,6 +308,8 @@ private fun SearchPanel(
 private fun FriendZoneMap(
     modifier: Modifier,
     zones: List<ZoneUi>,
+    deviceLocation: DeviceLocationUi?,
+    friendMarkers: List<FriendMapUi>,
     focusTarget: MapFocusTarget?,
     appliedFocusRequestId: Long,
     onFocusApplied: (Long) -> Unit,
@@ -292,11 +339,6 @@ private fun FriendZoneMap(
                         return true
                     }
                 })
-
-                val myLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), this).apply {
-                    enableMyLocation()
-                }
-                overlays.add(myLocation)
             }
         },
         update = { mapView ->
@@ -323,6 +365,7 @@ private fun FriendZoneMap(
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     isDraggable = true
                     relatedObject = zone.id
+                    icon = ContextCompat.getDrawable(mapView.context, R.drawable.ic_zone_flag)
                     setOnMarkerClickListener { clickedMarker, _ ->
                         val clickedId = clickedMarker.relatedObject as? String ?: return@setOnMarkerClickListener true
                         onZoneClick(clickedId)
@@ -330,9 +373,7 @@ private fun FriendZoneMap(
                     }
                     setOnMarkerDragListener(object : Marker.OnMarkerDragListener {
                         override fun onMarkerDrag(marker: Marker?) = Unit
-
                         override fun onMarkerDragStart(marker: Marker?) = Unit
-
                         override fun onMarkerDragEnd(marker: Marker?) {
                             val draggedId = marker?.relatedObject as? String ?: return
                             val draggedPosition = marker.position
@@ -357,9 +398,32 @@ private fun FriendZoneMap(
                 markers.add(marker)
             }
 
+            deviceLocation?.let { device ->
+                markers.add(
+                    Marker(mapView).apply {
+                        position = GeoPoint(device.latitude, device.longitude)
+                        title = "Это устройство"
+                        subDescription = device.zoneNames.takeIf { it.isNotEmpty() }?.joinToString() ?: "Вне зон"
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        icon = ContextCompat.getDrawable(mapView.context, R.drawable.ic_device_beacon)
+                    }
+                )
+            }
+
+            friendMarkers.forEach { friend ->
+                markers.add(
+                    Marker(mapView).apply {
+                        position = GeoPoint(friend.latitude, friend.longitude)
+                        title = friend.displayName
+                        subDescription = friend.zoneNames.takeIf { it.isNotEmpty() }?.joinToString() ?: friend.tag
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        icon = mapView.context.getDrawable(android.R.drawable.presence_away)
+                    }
+                )
+            }
+
             mapView.overlays.addAll(circles)
             mapView.overlays.addAll(markers)
-
             mapView.invalidate()
         }
     )

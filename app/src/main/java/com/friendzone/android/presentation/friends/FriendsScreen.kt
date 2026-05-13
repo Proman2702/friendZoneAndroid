@@ -115,12 +115,13 @@ fun FriendsScreen(
         }
     }
 
-    if (editingFriend != null) {
-        RenameFriendDialog(
-            friend = editingFriend!!,
+    editingFriend?.let { friend ->
+        FriendDialog(
+            friend = friend,
             onDismiss = { editingFriend = null },
-            onConfirm = { friendId, displayName ->
+            onSave = { friendId, displayName, latitude, longitude ->
                 viewModel.renameFriend(friendId, displayName)
+                viewModel.updateFriendLocation(friendId, latitude, longitude)
                 editingFriend = null
             }
         )
@@ -192,11 +193,17 @@ private fun FriendCard(
                     color = FriendsAccent,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    text = friend.locationSummary(),
+                    color = FriendsBlue,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Переименовать друга",
+                    contentDescription = "Редактировать друга",
                     tint = FriendsText
                 )
             }
@@ -205,26 +212,42 @@ private fun FriendCard(
 }
 
 @Composable
-private fun RenameFriendDialog(
+private fun FriendDialog(
     friend: FriendUi,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onSave: (String, String, String, String) -> Unit
 ) {
     var name by remember(friend.id) { mutableStateOf(friend.displayName) }
+    var latitude by remember(friend.id) { mutableStateOf(friend.latitude?.toString().orEmpty()) }
+    var longitude by remember(friend.id) { mutableStateOf(friend.longitude?.toString().orEmpty()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Имя друга") },
+        title = { Text("Привязка друга") },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                label = { Text("Отображаемое имя") }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text("Отображаемое имя") }
+                )
+                OutlinedTextField(
+                    value = latitude,
+                    onValueChange = { latitude = it },
+                    singleLine = true,
+                    label = { Text("Широта") }
+                )
+                OutlinedTextField(
+                    value = longitude,
+                    onValueChange = { longitude = it },
+                    singleLine = true,
+                    label = { Text("Долгота") }
+                )
+            }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(friend.id, name) }) {
+            TextButton(onClick = { onSave(friend.id, name, latitude, longitude) }) {
                 Text("Сохранить")
             }
         },
@@ -234,4 +257,12 @@ private fun RenameFriendDialog(
             }
         }
     )
+}
+
+private fun FriendUi.locationSummary(): String {
+    return if (latitude != null && longitude != null) {
+        "Широта %.5f, долгота %.5f".format(latitude, longitude)
+    } else {
+        "Геолокация не привязана"
+    }
 }

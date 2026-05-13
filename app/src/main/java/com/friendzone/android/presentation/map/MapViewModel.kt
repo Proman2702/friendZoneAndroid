@@ -3,7 +3,10 @@ package com.friendzone.android.presentation.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.data.local.AppPreferences
+import com.friendzone.android.data.local.LocalFriendDto
+import com.friendzone.android.data.local.LocalLocationDto
 import com.friendzone.android.data.repository.FriendsRepository
+import com.friendzone.android.data.repository.LocationRepository
 import com.friendzone.android.data.repository.PlaceSearchRepository
 import com.friendzone.android.data.repository.ZoneRepository
 import com.friendzone.android.presentation.zones.FriendOptionUi
@@ -12,8 +15,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 
 data class MapFocusTarget(
     val latitude: Double,
@@ -22,22 +32,44 @@ data class MapFocusTarget(
     val requestId: Long = System.currentTimeMillis()
 )
 
+data class DeviceLocationUi(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Double,
+    val deviceTimeIso: String,
+    val zoneNames: List<String>
+)
+
+data class FriendMapUi(
+    val id: String,
+    val displayName: String,
+    val tag: String,
+    val latitude: Double,
+    val longitude: Double,
+    val zoneNames: List<String>,
+    val locationUpdatedAtIso: String?
+)
+
 data class MapScreenState(
     val isLoading: Boolean = false,
     val zones: List<ZoneUi> = emptyList(),
     val friends: List<FriendOptionUi> = emptyList(),
+    val friendMarkers: List<FriendMapUi> = emptyList(),
+    val deviceLocation: DeviceLocationUi? = null,
     val showInactiveZones: Boolean = true,
     val createDialogVisible: Boolean = false,
     val selectedZoneId: String? = null,
     val message: String? = null,
     val focusTarget: MapFocusTarget? = null,
-    val maxRadiusMeters: Int = 2000
+    val maxRadiusMeters: Int = 2000,
+    val onlyOwnMarkers: Boolean = true
 )
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val zoneRepository: ZoneRepository,
     private val placeSearchRepository: PlaceSearchRepository,
+    private val locationRepository: LocationRepository,
     private val prefs: AppPreferences,
     private val friendsRepository: FriendsRepository
 ) : ViewModel() {
@@ -46,6 +78,11 @@ class MapViewModel @Inject constructor(
 
     private var currentCenterLatitude: Double = 55.751244
     private var currentCenterLongitude: Double = 37.618423
+    private var initialDeviceFocusApplied = false
+
+    init {
+        observeBindings()
+    }
 
     fun loadZones() {
         viewModelScope.launch {
@@ -63,6 +100,7 @@ class MapViewModel @Inject constructor(
                     friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
                     maxRadiusMeters = maxRadius
                 )
+                applyDerivedMarkers()
             }.onFailure { error ->
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -129,7 +167,7 @@ class MapViewModel @Inject constructor(
             }.onSuccess {
                 _state.value = _state.value.copy(
                     createDialogVisible = false,
-                    message = "Зона добавлена"
+                    message = "Зона создана"
                 )
                 loadZones()
             }.onFailure { error ->
@@ -200,16 +238,13 @@ class MapViewModel @Inject constructor(
                         currentCenterLongitude = result.longitude
                         _state.value = _state.value.copy(
                             message = result.address,
-                            focusTarget = MapFocusTarget(
-                                latitude = result.latitude,
-                                longitude = result.longitude
-                            )
+                            focusTarget = MapFocusTarget(result.latitude, result.longitude)
                         )
                     }
                 }
                 .onFailure { error ->
                     _state.value = _state.value.copy(
-                        message = error.message ?: "Поиск места недоступен"
+                        message = error.message ?: "Поиск недоступен"
                     )
                 }
         }
@@ -217,6 +252,109 @@ class MapViewModel @Inject constructor(
 
     fun clearMessage() {
         _state.value = _state.value.copy(message = null)
+    }
+
+    private fun observeBindings() {
+        viewModelScope.launch {
+            combine(
+                locationRepository.currentDeviceLocation,
+                friendsRepository.observeFriends(),
+                prefs.onlyOwnMarkers
+            ) { deviceLocation, friends, onlyOwnMarkers ->
+                Triple(deviceLocation, friends, onlyOwnMarkers)
+            }.collect { (deviceLocation, friends, onlyOwnMarkers) ->
+                _state.value = _state.value.copy(
+                    friends = friends.map { FriendOptionUi(it.id, it.tag, it.displayName) },
+                    onlyOwnMarkers = onlyOwnMarkers
+                )
+                applyDerivedMarkers(deviceLocation, friends, onlyOwnMarkers)
+            }
+        }
+    }
+
+    private fun applyDerivedMarkers(
+        deviceLocation: LocalLocationDto? = null,
+        friends: List<LocalFriendDto> = emptyList(),
+        onlyOwnMarkers: Boolean = _state.value.onlyOwnMarkers
+    ) {
+        val actualDeviceLocation = deviceLocation ?: _state.value.deviceLocation?.let {
+            LocalLocationDto(it.latitude, it.longitude, it.accuracy, it.deviceTimeIso)
+        }
+        val actualFriends = if (friends.isEmpty()) {
+            _state.value.friendMarkers.map {
+                LocalFriendDto(
+                    id = it.id,
+                    tag = it.tag,
+                    displayName = it.displayName,
+                    latitude = it.latitude,
+                    longitude = it.longitude,
+                    locationUpdatedAtIso = it.locationUpdatedAtIso
+                )
+            }
+        } else {
+            friends
+        }
+
+        val deviceUi = actualDeviceLocation?.toUi(_state.value.zones)
+        val friendMarkers = if (onlyOwnMarkers) {
+            emptyList()
+        } else {
+            actualFriends.mapNotNull { it.toMapUi(_state.value.zones) }
+        }
+
+        _state.value = _state.value.copy(
+            deviceLocation = deviceUi,
+            friendMarkers = friendMarkers
+        )
+
+        if (deviceUi != null && !initialDeviceFocusApplied && _state.value.focusTarget == null) {
+            currentCenterLatitude = deviceUi.latitude
+            currentCenterLongitude = deviceUi.longitude
+            initialDeviceFocusApplied = true
+            _state.value = _state.value.copy(
+                focusTarget = MapFocusTarget(deviceUi.latitude, deviceUi.longitude, 16.0)
+            )
+        }
+    }
+
+    private fun LocalLocationDto.toUi(zones: List<ZoneUi>): DeviceLocationUi {
+        return DeviceLocationUi(
+            latitude = latitude,
+            longitude = longitude,
+            accuracy = accuracy,
+            deviceTimeIso = deviceTimeIso,
+            zoneNames = zones.filter { it.containsPoint(latitude, longitude) }.map { it.name }
+        )
+    }
+
+    private fun LocalFriendDto.toMapUi(zones: List<ZoneUi>): FriendMapUi? {
+        val lat = latitude ?: return null
+        val lon = longitude ?: return null
+        return FriendMapUi(
+            id = id,
+            displayName = displayName,
+            tag = tag,
+            latitude = lat,
+            longitude = lon,
+            zoneNames = zones
+                .filter { zone -> zone.containsPoint(lat, lon) && (zone.detectorFriendIds.isEmpty() || zone.detectorFriendIds.contains(id)) }
+                .map { it.name },
+            locationUpdatedAtIso = locationUpdatedAtIso
+        )
+    }
+
+    private fun ZoneUi.containsPoint(latitude: Double, longitude: Double): Boolean {
+        return distanceMeters(centerLat, centerLon, latitude, longitude) <= radiusMeters
+    }
+
+    private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val earthRadius = 6_371_000.0
+        val cosine = (
+            (sin(Math.toRadians(lat1)) * sin(Math.toRadians(lat2))) +
+                (cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * cos(Math.toRadians(lon1 - lon2)))
+            )
+        val angle = acos(min(1.0, max(-1.0, cosine)))
+        return earthRadius * angle
     }
 
     private fun com.friendzone.android.data.remote.dto.ZoneDto.toUi(): ZoneUi {

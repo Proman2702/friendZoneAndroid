@@ -48,6 +48,7 @@ import com.friendzone.android.presentation.auth.RegisterScreen
 import com.friendzone.android.presentation.friends.FriendsScreen
 import com.friendzone.android.presentation.map.MapScreen
 import com.friendzone.android.presentation.map.MapViewModel
+import com.friendzone.android.presentation.settings.SettingsViewModel
 import com.friendzone.android.presentation.settings.SettingsScreen
 import com.friendzone.android.presentation.zones.ZoneEditScreen
 import com.friendzone.android.presentation.zones.ZoneListScreen
@@ -81,10 +82,10 @@ private val bottomDestinations = listOf(
 @Composable
 fun AppNavHost(
     authViewModel: AuthViewModel,
+    settingsViewModel: SettingsViewModel,
     navController: NavHostController = rememberNavController()
 ) {
     val authState by authViewModel.state.collectAsState()
-    val mapViewModel = hiltViewModel<MapViewModel>()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomDestinations.map { it.route }
@@ -106,7 +107,6 @@ fun AppNavHost(
                     currentRoute = currentRoute,
                     onNavigate = { route -> navController.navigateToMainRoute(route) },
                     onCreateZone = {
-                        mapViewModel.requestCreateDialog()
                         navController.navigateToMainRoute(Routes.MAP)
                     }
                 )
@@ -122,6 +122,7 @@ fun AppNavHost(
                 LoginScreen(
                     errorMessage = authState.errorMessage,
                     infoMessage = authState.infoMessage,
+                    apiBaseUrl = authState.apiBaseUrl,
                     onLogin = authViewModel::login,
                     onOpenRegistration = {
                         authViewModel.clearMessages()
@@ -130,7 +131,9 @@ fun AppNavHost(
                     onOpenForgotPassword = {
                         authViewModel.clearMessages()
                         navController.navigate(Routes.FORGOT_PASSWORD)
-                    }
+                    },
+                    onSaveApiBaseUrl = authViewModel::saveApiBaseUrl,
+                    onMessagesShown = authViewModel::clearMessages
                 )
             }
             composable(Routes.REGISTER) {
@@ -144,7 +147,8 @@ fun AppNavHost(
                     onBack = {
                         authViewModel.clearMessages()
                         navController.popBackStack()
-                    }
+                    },
+                    onMessagesShown = authViewModel::clearMessages
                 )
             }
             composable(Routes.FORGOT_PASSWORD) {
@@ -155,11 +159,16 @@ fun AppNavHost(
                     onBack = {
                         authViewModel.clearMessages()
                         navController.popBackStack()
-                    }
+                    },
+                    onMessagesShown = authViewModel::clearMessages
                 )
             }
             composable(Routes.MAP) {
-                MapScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) }, viewModel = mapViewModel)
+                val mapViewModel = hiltViewModel<MapViewModel>()
+                MapScreen(
+                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                    viewModel = mapViewModel
+                )
             }
             composable(Routes.ZONES) {
                 ZoneListScreen()
@@ -174,7 +183,10 @@ fun AppNavHost(
                 )
             }
             composable(Routes.SETTINGS) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = settingsViewModel
+                )
             }
             composable(Routes.INVITATIONS) {
                 InvitationsScreen(onBack = { navController.popBackStack() })

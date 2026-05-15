@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 
 private val SettingsBackground = Color(0xFF120D33)
 private val SettingsCard = Color(0xFFFAFAFC)
@@ -42,7 +41,7 @@ private val SettingsText = Color(0xFF1C1840)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel
 ) {
     val state by viewModel.state.collectAsState()
 

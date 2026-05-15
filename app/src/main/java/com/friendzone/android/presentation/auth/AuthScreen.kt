@@ -1,5 +1,6 @@
 package com.friendzone.android.presentation.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,25 +23,32 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -72,23 +80,39 @@ private val Righteous = FontFamily(Font(R.font.righteous))
 fun LoginScreen(
     errorMessage: String?,
     infoMessage: String?,
+    apiBaseUrl: String,
     onLogin: (String, String) -> Unit,
     onOpenRegistration: () -> Unit,
-    onOpenForgotPassword: () -> Unit
+    onOpenForgotPassword: () -> Unit,
+    onSaveApiBaseUrl: (String) -> Unit,
+    onMessagesShown: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
+    var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var dialogVisible by remember { mutableStateOf(false) }
+    var serverValue by remember(apiBaseUrl) { mutableStateOf(apiBaseUrl.removeSuffix("/")) }
+
+    AuthNotifications(
+        errorMessage = errorMessage,
+        infoMessage = infoMessage,
+        onMessagesShown = onMessagesShown
+    )
 
     AuthScaffold {
-        Spacer(modifier = Modifier.height(120.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            ServerSettingsButton(onClick = { dialogVisible = true })
+        }
+        Spacer(modifier = Modifier.height(68.dp))
         LogoBlock()
         Spacer(modifier = Modifier.height(96.dp))
         AuthTextField(
-            value = email,
-            onValueChange = { email = it },
+            value = login,
+            onValueChange = { login = it },
             label = "Логин",
-            keyboardType = KeyboardType.Email,
             width = 320.dp,
             height = 64.dp
         )
@@ -110,34 +134,30 @@ fun LoginScreen(
             modifier = Modifier.align(Alignment.End),
             onClick = onOpenForgotPassword
         )
-        if (!errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = Color(0xFFFFB4AB),
-                modifier = Modifier.padding(top = 20.dp),
-                textAlign = TextAlign.Center
-            )
-        }
-        if (!infoMessage.isNullOrBlank()) {
-            Text(
-                text = infoMessage,
-                color = Color(0xFFD9D5F1),
-                modifier = Modifier.padding(top = 20.dp),
-                textAlign = TextAlign.Center
-            )
-        }
         Spacer(modifier = Modifier.height(80.dp))
         PrimaryAuthButton(
             text = "Вход",
             width = 140.dp,
             height = 40.dp
         ) {
-            onLogin(email, password)
+            onLogin(login, password)
         }
         UnderlinedActionText(
             text = "Регистрация",
             modifier = Modifier.padding(top = 6.dp),
             onClick = onOpenRegistration
+        )
+    }
+
+    if (dialogVisible) {
+        ServerSettingsDialog(
+            currentValue = serverValue,
+            onValueChange = { serverValue = it },
+            onDismiss = { dialogVisible = false },
+            onSave = {
+                onSaveApiBaseUrl(serverValue)
+                dialogVisible = false
+            }
         )
     }
 }
@@ -146,30 +166,36 @@ fun LoginScreen(
 fun RegisterScreen(
     errorMessage: String?,
     onRegister: (String, String, String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onMessagesShown: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var displayName by remember { mutableStateOf("") }
+    var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    AuthNotifications(
+        errorMessage = errorMessage,
+        infoMessage = null,
+        onMessagesShown = onMessagesShown
+    )
 
     AuthScaffold {
         Spacer(modifier = Modifier.height(120.dp))
         AuthTitleBlock("Регистрация")
         Spacer(modifier = Modifier.height(96.dp))
         AuthTextField(
-            value = name,
-            onValueChange = { name = it },
+            value = displayName,
+            onValueChange = { displayName = it },
             label = "Имя",
             width = 320.dp,
             height = 64.dp
         )
         Spacer(modifier = Modifier.height(16.dp))
         AuthTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = "Почта",
-            keyboardType = KeyboardType.Email,
+            value = login,
+            onValueChange = { login = it },
+            label = "Логин",
             width = 320.dp,
             height = 64.dp
         )
@@ -185,21 +211,13 @@ fun RegisterScreen(
             width = 320.dp,
             height = 64.dp
         )
-        if (!errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = Color(0xFFFFB4AB),
-                modifier = Modifier.padding(top = 20.dp),
-                textAlign = TextAlign.Center
-            )
-        }
         Spacer(modifier = Modifier.height(80.dp))
         PrimaryAuthButton(
             text = "Сохранить",
             width = 140.dp,
             height = 40.dp
         ) {
-            onRegister(name, email, password)
+            onRegister(displayName, login, password)
         }
         UnderlinedActionText(
             text = "Назад ко входу",
@@ -214,51 +232,58 @@ fun ForgotPasswordScreen(
     errorMessage: String?,
     infoMessage: String?,
     onRecover: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onMessagesShown: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
+    var login by remember { mutableStateOf("") }
+
+    AuthNotifications(
+        errorMessage = errorMessage,
+        infoMessage = infoMessage,
+        onMessagesShown = onMessagesShown
+    )
 
     AuthScaffold {
         Spacer(modifier = Modifier.height(120.dp))
         AuthTitleBlock("Восстановление пароля")
         Spacer(modifier = Modifier.height(96.dp))
         AuthTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = "Почта",
-            keyboardType = KeyboardType.Email,
+            value = login,
+            onValueChange = { login = it },
+            label = "Логин",
             width = 320.dp,
             height = 64.dp
         )
-        if (!errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = Color(0xFFFFB4AB),
-                modifier = Modifier.padding(top = 20.dp),
-                textAlign = TextAlign.Center
-            )
-        }
-        if (!infoMessage.isNullOrBlank()) {
-            Text(
-                text = infoMessage,
-                color = Color(0xFFD9D5F1),
-                modifier = Modifier.padding(top = 20.dp),
-                textAlign = TextAlign.Center
-            )
-        }
         Spacer(modifier = Modifier.height(80.dp))
         PrimaryAuthButton(
             text = "Отправить",
             width = 140.dp,
             height = 40.dp
         ) {
-            onRecover(email)
+            onRecover(login)
         }
         UnderlinedActionText(
             text = "Назад ко входу",
             modifier = Modifier.padding(top = 6.dp),
             onClick = onBack
         )
+    }
+}
+
+@Composable
+private fun AuthNotifications(
+    errorMessage: String?,
+    infoMessage: String?,
+    onMessagesShown: () -> Unit
+) {
+    val context = LocalContext.current
+    val message = errorMessage ?: infoMessage
+
+    LaunchedEffect(message) {
+        if (!message.isNullOrBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            onMessagesShown()
+        }
     }
 }
 
@@ -279,6 +304,81 @@ private fun AuthScaffold(content: @Composable ColumnScope.() -> Unit) {
             content = content
         )
     }
+}
+
+@Composable
+private fun ServerSettingsButton(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .offset(x = 6.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.1f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = "Настройки сервера",
+            tint = Color.White,
+            modifier = Modifier.size(15.dp)
+        )
+        Text(
+            text = "Сервер",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun ServerSettingsDialog(
+    currentValue: String,
+    onValueChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Адрес сервера") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Введите IP с портом или полный URL",
+                    fontSize = 14.sp
+                )
+                OutlinedTextField(
+                    value = currentValue,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    label = { Text("Например 192.168.0.10:8080") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = AuthFieldText,
+                        unfocusedTextColor = AuthFieldText
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AuthAccent,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
 }
 
 @Composable
@@ -335,15 +435,15 @@ private fun LogoBlock() {
 
 @Composable
 private fun AuthTitleBlock(title: String) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 40.sp,
-            lineHeight = 50.sp,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+    Text(
+        text = title,
+        color = Color.White,
+        fontSize = 40.sp,
+        lineHeight = 50.sp,
+        fontWeight = FontWeight.ExtraBold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 4.dp)
+    )
 }
 
 @Composable
@@ -412,16 +512,8 @@ private fun AuthTextField(
                         .padding(end = 8.dp)
                 ) {
                     Icon(
-                        imageVector = if (passwordVisible) {
-                            Icons.Default.Visibility
-                        } else {
-                            Icons.Default.VisibilityOff
-                        },
-                        contentDescription = if (passwordVisible) {
-                            "Пароль виден"
-                        } else {
-                            "Пароль скрыт"
-                        },
+                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null,
                         tint = AuthFieldText
                     )
                 }

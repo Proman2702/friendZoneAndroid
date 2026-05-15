@@ -9,48 +9,15 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="41a57beb-5b5c-4fa1-b007-8583e7c42c97" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/AndroidProjectSystem.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/markdown.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/FriendDtos.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/RemoteErrors.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/app/di/AppModule.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/app/di/AppModule.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/local/AppPreferences.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/local/LocalFriendDto.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/local/LocalInvitationDto.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/ApiBaseUrlProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/ApiBaseUrlProvider.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/ApiClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/ApiClient.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/FriendZoneApi.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/FriendZoneApi.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/AuthDtos.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/AuthDtos.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/EventDto.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/EventDto.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/LocationBatchRequest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/LocationBatchRequest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/LocationRequest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/LocationRequest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneCreateRequest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneCreateRequest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneDto.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneDto.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneUpdateRequest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/remote/dto/ZoneUpdateRequest.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/AuthRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/AuthRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/ClientRepository.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/EventRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/EventRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/FriendsRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/LocationRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/ZoneRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/data/repository/ZoneRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/AccountScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/AccountScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/AccountViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/AccountViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/InvitationsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/InvitationsViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/account/InvitationsViewModel.kt" afterDir="false" />
+    <list default="true" id="41a57beb-5b5c-4fa1-b007-8583e7c42c97" name="Changes" comment="raw connection to database">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/app/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/app/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/core/location/LocationTrackingManager.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/auth/AuthScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/auth/AuthScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/auth/AuthViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/auth/AuthViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/bootstrap/BootstrapViewModel.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/friends/FriendsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/friends/FriendsViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/map/MapViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/zones/ZoneListViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/zones/ZoneListViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/navigation/AppNavHost.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/navigation/AppNavHost.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/settings/SettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/friendzone/android/presentation/settings/SettingsViewModel.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -111,6 +78,9 @@
     <commands />
     <urls />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 3
@@ -130,6 +100,7 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
@@ -299,7 +270,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778617143786</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="raw connection to database">
+      <option name="closed" value="true" />
+      <created>1778710092302</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1778710092302</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -323,7 +302,8 @@
     <MESSAGE value="i can't do well when i think you're gonna leave but i know i try" />
     <MESSAGE value="geo integrated" />
     <MESSAGE value="geo integrated 2" />
-    <option name="LAST_COMMIT_MESSAGE" value="geo integrated 2" />
+    <MESSAGE value="raw connection to database" />
+    <option name="LAST_COMMIT_MESSAGE" value="raw connection to database" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">

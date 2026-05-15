@@ -2,12 +2,10 @@ package com.friendzone.android.presentation.settings
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.core.location.LocationTrackingManager
 import com.friendzone.android.data.local.AppPreferences
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -22,10 +20,9 @@ data class SettingsState(
     val notifyAboutFriend: Boolean = true
 )
 
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModel(
     private val prefs: AppPreferences,
-    @ApplicationContext private val appContext: Context
+    private val appContext: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state
@@ -108,6 +105,17 @@ class SettingsViewModel @Inject constructor(
                 apiBaseUrl = normalized,
                 locationUpdateIntervalMinutes = locationIntervalMinutes.toString()
             )
+        }
+    }
+
+    class Factory(
+        private val prefs: AppPreferences,
+        private val appContext: Context
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass == SettingsViewModel::class.java)
+            return SettingsViewModel(prefs, appContext) as T
         }
     }
 }

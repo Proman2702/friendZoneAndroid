@@ -1,11 +1,10 @@
 package com.friendzone.android.presentation.auth
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.friendzone.android.data.local.AppPreferences
 import com.friendzone.android.data.repository.AuthRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,11 +15,11 @@ import kotlinx.coroutines.launch
 data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val errorMessage: String? = null,
-    val infoMessage: String? = null
+    val infoMessage: String? = null,
+    val apiBaseUrl: String = ""
 )
 
-@HiltViewModel
-class AuthViewModel @Inject constructor(
+class AuthViewModel(
     private val prefs: AppPreferences,
     private val authRepository: AuthRepository
 ) : ViewModel() {
@@ -33,8 +32,18 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    val state: StateFlow<AuthUiState> = combine(prefs.isLoggedIn, error, info) { isLoggedIn, errorText, infoText ->
-        AuthUiState(isLoggedIn, errorText, infoText)
+    val state: StateFlow<AuthUiState> = combine(
+        prefs.isLoggedIn,
+        prefs.apiBaseUrl,
+        error,
+        info
+    ) { isLoggedIn, apiBaseUrl, errorText, infoText ->
+        AuthUiState(
+            isLoggedIn = isLoggedIn,
+            errorMessage = errorText,
+            infoMessage = infoText,
+            apiBaseUrl = apiBaseUrl
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthUiState())
 
     fun login(login: String, password: String) {
@@ -81,6 +90,27 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun saveApiBaseUrl(value: String) {
+        viewModelScope.launch {
+            val trimmed = value.trim()
+            if (trimmed.isBlank()) {
+                error.value = "Enter server IP or URL"
+                info.value = null
+                return@launch
+            }
+
+            val withScheme = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                trimmed
+            } else {
+                "http://$trimmed"
+            }
+            val normalized = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
+            prefs.setApiBaseUrl(normalized)
+            info.value = "Server saved: $normalized"
+            error.value = null
+        }
+    }
+
     fun logout() {
         viewModelScope.launch { authRepository.logout() }
     }
@@ -88,5 +118,16 @@ class AuthViewModel @Inject constructor(
     fun clearMessages() {
         error.value = null
         info.value = null
+    }
+
+    class Factory(
+        private val prefs: AppPreferences,
+        private val authRepository: AuthRepository
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass == AuthViewModel::class.java)
+            return AuthViewModel(prefs, authRepository) as T
+        }
     }
 }
